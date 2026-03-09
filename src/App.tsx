@@ -19,7 +19,7 @@ import ClientesPage from "./pages/panel/ClientesPage";
 import WaitlistPage from "./pages/panel/WaitlistPage";
 import PerfilPage from "./pages/panel/PerfilPage";
 import { AdminDashboard, AdminInfluenciadoras, AdminClientes, AdminAgendamentos, AdminWaitlist } from "./pages/admin/AdminPages";
-import { ClientBookings, ClientProfile } from "./pages/client/ClientPages";
+import { ClientBookings, ClientProfile, ClientExplore } from "./pages/client/ClientPages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
