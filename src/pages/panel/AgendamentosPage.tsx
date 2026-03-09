@@ -15,7 +15,7 @@ const AgendamentosPage = () => {
   const fetchBookings = async () => {
     if (!influencer) return;
     let q = supabase.from("bookings").select("*, clients(*), services(*)").eq("influencer_id", influencer.id).order("data_agendada", { ascending: false });
-    if (statusFilter) q = q.eq("status", statusFilter);
+    if (statusFilter) q = q.eq("status", statusFilter as any);
     const { data } = await q;
     setBookings((data as any) || []);
   };
