@@ -417,8 +417,8 @@ const AgendarServico = () => {
               </div>
             )}
 
-            <Button variant="hero" size="lg" className="w-full" disabled={submitting || !selectedService || !selectedDate}>
-              {submitting ? "Agendando..." : existingClient?.status === "ativo" ? "Confirmar e Pagar" : "Enviar para aprovação"}
+            <Button variant="hero" size="lg" className="w-full" disabled={submitting || uploadingFiles || !selectedService || !selectedDate}>
+              {uploadingFiles ? "Enviando arquivos..." : submitting ? "Agendando..." : existingClient?.status === "ativo" ? "Confirmar e Pagar" : "Enviar para aprovação"}
             </Button>
           </form>
         </div>
