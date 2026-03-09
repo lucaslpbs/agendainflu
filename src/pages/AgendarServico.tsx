@@ -76,15 +76,36 @@ const AgendarServico = () => {
     return format(d, "yyyy-MM-dd");
   });
 
+  const isOnlineService = chosenService && chosenService.formato === "online";
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (kitMidiaFiles.length + files.length > 5) {
+      toast.error("Máximo de 5 arquivos");
+      return;
+    }
+    setKitMidiaFiles((prev) => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setKitMidiaFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !influencer || !selectedService || !selectedDate) return;
+
+    // Validate kit mídia for online services
+    if (isOnlineService && kitMidiaFiles.length === 0 && !descricaoProduto.trim()) {
+      toast.error("Para serviços online, envie o kit mídia (fotos) ou descreva o produto.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       let clientId = existingClient?.id;
 
-      // If no client relationship exists, create one
       if (!clientId) {
         const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
           influencer_id: influencer.id,
@@ -93,7 +114,7 @@ const AgendarServico = () => {
           whatsapp: clientProfile?.whatsapp || "",
           email: user.email || "",
           empresa: clientProfile?.razao_social || clientProfile?.nome || null,
-          status: "espera" as const, // New clients wait for approval
+          status: "espera" as const,
           origem: "site" as const,
         }).select().single();
 
@@ -101,7 +122,21 @@ const AgendarServico = () => {
         clientId = newClient.id;
       }
 
-      // Determine initial booking status
+      // Upload kit mídia files
+      let materialUrls: string[] = [];
+      if (kitMidiaFiles.length > 0) {
+        setUploadingFiles(true);
+        for (const file of kitMidiaFiles) {
+          const fileExt = file.name.split(".").pop();
+          const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage.from("materials").upload(filePath, file);
+          if (uploadErr) throw uploadErr;
+          const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
+          materialUrls.push(urlData.publicUrl);
+        }
+        setUploadingFiles(false);
+      }
+
       const isApproved = existingClient?.status === "ativo";
 
       const { data: booking, error: bookingErr } = await supabase.from("bookings").insert({
@@ -112,8 +147,9 @@ const AgendarServico = () => {
         descricao_produto: descricaoProduto || null,
         link_negocio: linkNegocio || null,
         observacoes: observacoes || null,
+        material_url: materialUrls.length > 0 ? materialUrls.join(",") : null,
         status: isApproved ? "confirmado" : "pendente",
-        codigo_confirmacao: "TEMP", // trigger will generate
+        codigo_confirmacao: "TEMP",
       }).select().single();
 
       if (bookingErr) throw bookingErr;

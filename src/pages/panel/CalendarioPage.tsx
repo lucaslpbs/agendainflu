@@ -248,6 +248,13 @@ const CalendarioPage = () => {
           </div>
         </div>
       </div>
+
+      <BookingDetailDialog
+        booking={detailBooking}
+        open={!!detailBooking}
+        onOpenChange={(open) => !open && setDetailBooking(null)}
+        onUpdateStatus={updateBookingStatus}
+      />
     </PanelLayout>
   );
 };
