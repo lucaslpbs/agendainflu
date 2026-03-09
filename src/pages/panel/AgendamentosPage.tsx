@@ -16,6 +16,7 @@ const AgendamentosPage = () => {
   const { influencer } = useAuth();
   const [bookings, setBookings] = useState<BookingWithRelations[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState<BookingWithRelations | null>(null);
 
   const fetchBookings = async () => {
     if (!influencer) return;
