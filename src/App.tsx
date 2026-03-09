@@ -66,6 +66,7 @@ const App = () => (
 
             {/* Client panel */}
             <Route path="/cliente" element={<ProtectedRoute><ClientBookings /></ProtectedRoute>} />
+            <Route path="/cliente/explorar" element={<ProtectedRoute><ClientExplore /></ProtectedRoute>} />
             <Route path="/cliente/perfil" element={<ProtectedRoute><ClientProfile /></ProtectedRoute>} />
 
             {/* Public influencer profile - must be last */}
