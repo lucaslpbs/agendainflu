@@ -367,5 +367,6 @@ const InfluencerProfile = () => {
 // Need toast import
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
+import InstagramFeed from "@/components/profile/InstagramFeed";
 
 export default InfluencerProfile;
