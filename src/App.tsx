@@ -7,7 +7,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CadastroInfluenciadora from "./pages/CadastroInfluenciadora";
+import CadastroCliente from "./pages/CadastroCliente";
 import InfluencerProfile from "./pages/InfluencerProfile";
+import AgendarServico from "./pages/AgendarServico";
 import ListaEspera from "./pages/ListaEspera";
 import Dashboard from "./pages/panel/Dashboard";
 import CalendarioPage from "./pages/panel/CalendarioPage";
@@ -41,8 +43,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro-influenciadora" element={<CadastroInfluenciadora />} />
+            <Route path="/cadastro-cliente" element={<CadastroCliente />} />
             <Route path="/lista-espera" element={<ListaEspera />} />
             <Route path="/lista-espera/:username" element={<ListaEspera />} />
+            <Route path="/agendar/:username" element={<ProtectedRoute><AgendarServico /></ProtectedRoute>} />
 
             {/* Influencer panel */}
             <Route path="/painel" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

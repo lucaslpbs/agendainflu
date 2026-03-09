@@ -123,12 +123,18 @@ const Login = () => {
               {mode === "password" ? "Entrar com Magic Link" : "Entrar com senha"}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Não tem conta?{" "}
-              <Link to="/cadastro-influenciadora" className="text-primary font-medium hover:underline">
-                Cadastre-se como influenciadora
-              </Link>
-            </p>
+            <div className="text-center text-sm text-muted-foreground space-y-2">
+              <p>Não tem conta?</p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Link to="/cadastro-cliente" className="text-primary font-medium hover:underline">
+                  Sou empresa/cliente
+                </Link>
+                <span className="hidden sm:inline text-border">|</span>
+                <Link to="/cadastro-influenciadora" className="text-accent font-medium hover:underline">
+                  Sou influenciadora
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Star, Instagram, MapPin, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2 } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Star, Instagram, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import type { Tables } from "@/integrations/supabase/types";
@@ -30,9 +31,12 @@ const mockStats = [
 
 const InfluencerProfile = () => {
   const { username } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [influencer, setInfluencer] = useState<Tables<"influencers"> | null>(null);
   const [services, setServices] = useState<Tables<"services">[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExistingClient, setIsExistingClient] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,11 +56,32 @@ const InfluencerProfile = () => {
           .eq("influencer_id", inf.id)
           .eq("ativo", true);
         setServices(svc || []);
+
+        // Check if logged-in user is already a client of this influencer
+        if (user) {
+          const { data: clientData } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("influencer_id", inf.id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          setIsExistingClient(!!clientData);
+        }
       }
       setLoading(false);
     };
     fetchData();
-  }, [username]);
+  }, [username, user]);
+
+  const handleAgendar = (serviceId?: string) => {
+    if (!user) {
+      toast("Você precisa estar logado para agendar um serviço.");
+      navigate("/login");
+      return;
+    }
+    // Navigate to booking page with context
+    navigate(`/agendar/${username}${serviceId ? `?service=${serviceId}` : ""}`);
+  };
 
   if (loading) {
     return (
@@ -89,8 +114,10 @@ const InfluencerProfile = () => {
   }
 
   const instagramHandle = influencer.instagram_url
-    ? influencer.instagram_url.replace(/https?:\/\/(www\.)?instagram\.com\/?/i, "").replace(/\/$/, "")
+    ? influencer.instagram_url.replace(/https?:\/\/(www\.)?instagram\.com\/?/i, "").replace(/\/$/, "").replace(/^@/, "")
     : null;
+
+  const isLoggedIn = !!user;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -104,18 +131,15 @@ const InfluencerProfile = () => {
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* Profile Card overlapping banner */}
+        {/* Profile Card */}
         <div className="container max-w-5xl -mt-20 relative z-10">
           <div className="bg-card rounded-2xl border border-border p-6 md:p-8 shadow-lg">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               {/* Avatar */}
               <div className="relative">
                 {influencer.foto_url ? (
-                  <img
-                    src={influencer.foto_url}
-                    alt={influencer.nome}
-                    className="w-32 h-32 md:w-36 md:h-36 rounded-2xl object-cover border-4 border-card shadow-xl"
-                  />
+                  <img src={influencer.foto_url} alt={influencer.nome}
+                    className="w-32 h-32 md:w-36 md:h-36 rounded-2xl object-cover border-4 border-card shadow-xl" />
                 ) : (
                   <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-5xl font-bold shadow-xl">
                     {influencer.nome.charAt(0)}
@@ -149,12 +173,9 @@ const InfluencerProfile = () => {
                   )}
 
                   {instagramHandle && (
-                    <a
-                      href={influencer.instagram_url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-foreground px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                    >
+                    <a href={influencer.instagram_url!.startsWith("http") ? influencer.instagram_url! : `https://instagram.com/${instagramHandle}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-foreground px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors">
                       <Instagram size={14} className="text-primary" />
                       @{instagramHandle}
                       <ExternalLink size={10} className="text-muted-foreground" />
@@ -178,11 +199,17 @@ const InfluencerProfile = () => {
                       </Button>
                     </a>
                   )}
-                  <Button variant="hero" size="lg" asChild>
-                    <Link to={`/lista-espera/${username}`}>
+                  {isLoggedIn ? (
+                    <Button variant="hero" size="lg" onClick={() => handleAgendar()}>
                       <Calendar size={18} className="mr-1" /> Agendar Serviço
-                    </Link>
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button variant="hero" size="lg" asChild>
+                      <Link to="/login">
+                        <Lock size={18} className="mr-1" /> Entrar para Agendar
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -198,7 +225,7 @@ const InfluencerProfile = () => {
         </div>
       </div>
 
-      {/* Stats Section */}
+      {/* Stats */}
       <div className="container max-w-5xl mt-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {mockStats.map((stat) => (
@@ -211,7 +238,7 @@ const InfluencerProfile = () => {
         </div>
       </div>
 
-      {/* Services */}
+      {/* Services - show types always, prices only for logged in */}
       <div className="container max-w-5xl mt-10">
         <div className="flex items-center gap-2 mb-6">
           <h2 className="text-xl md:text-2xl font-bold font-display">Serviços disponíveis</h2>
@@ -233,39 +260,45 @@ const InfluencerProfile = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-primary">R$ {s.preco.toFixed(2)}</span>
+                    {isLoggedIn ? (
+                      <span className="text-xl font-bold text-primary">R$ {Number(s.preco).toFixed(2)}</span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+                        <Lock size={12} /> Faça login
+                      </span>
+                    )}
                   </div>
                 </div>
                 {s.descricao && <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{s.descricao}</p>}
-                <Button variant="hero" size="sm" className="w-full group-hover:shadow-rosa transition-shadow" asChild>
-                  <Link to={`/lista-espera/${username}`}>
+                {isLoggedIn ? (
+                  <Button variant="hero" size="sm" className="w-full group-hover:shadow-rosa transition-shadow" onClick={() => handleAgendar(s.id)}>
                     <Calendar size={14} className="mr-1" /> Agendar este serviço
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" className="w-full" asChild>
+                    <Link to="/login">
+                      <Lock size={14} className="mr-1" /> Entrar para ver preço e agendar
+                    </Link>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <p className="text-muted-foreground">Esta influenciadora ainda não cadastrou serviços.</p>
-            <Button variant="hero" size="sm" className="mt-4" asChild>
-              <Link to={`/lista-espera/${username}`}>Entrar na lista de espera</Link>
-            </Button>
           </div>
         )}
       </div>
 
-      {/* Testimonials / Results */}
+      {/* Testimonials */}
       <div className="container max-w-5xl mt-12 mb-16">
         <h2 className="text-xl md:text-2xl font-bold font-display mb-6">
           O que dizem os <span className="text-primary">clientes</span>
         </h2>
         <div className="grid sm:grid-cols-3 gap-5">
           {mockTestimonials.map((t, i) => (
-            <div
-              key={i}
-              className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-shadow relative"
-            >
+            <div key={i} className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-shadow relative">
               <div className="absolute -top-3 left-6 bg-primary/10 text-primary text-lg px-2 rounded-md">"</div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 mt-2">{t.texto}</p>
               <div className="flex items-center gap-0.5 mb-3">
@@ -297,18 +330,31 @@ const InfluencerProfile = () => {
             Entre em contato com {influencer.nome} e descubra como uma parceria pode transformar seus resultados.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            {influencer.whatsapp && (
-              <a href={`https://wa.me/${influencer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="gold" size="lg" className="flex items-center gap-2">
-                  <MessageCircle size={18} /> WhatsApp
+            {!isLoggedIn ? (
+              <>
+                <Button variant="hero" size="lg" asChild>
+                  <Link to="/cadastro-cliente">
+                    <Building2 size={18} className="mr-1" /> Criar conta empresarial
+                  </Link>
                 </Button>
-              </a>
+                <Button variant="outline" size="lg" asChild>
+                  <Link to="/login">Já tenho conta</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                {influencer.whatsapp && (
+                  <a href={`https://wa.me/${influencer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="gold" size="lg" className="flex items-center gap-2">
+                      <MessageCircle size={18} /> WhatsApp
+                    </Button>
+                  </a>
+                )}
+                <Button variant="hero" size="lg" onClick={() => handleAgendar()}>
+                  <Calendar size={18} className="mr-1" /> Agendar agora
+                </Button>
+              </>
             )}
-            <Button variant="hero" size="lg" asChild>
-              <Link to={`/lista-espera/${username}`}>
-                <Calendar size={18} className="mr-1" /> Agendar agora
-              </Link>
-            </Button>
           </div>
         </div>
       </div>
@@ -317,5 +363,9 @@ const InfluencerProfile = () => {
     </div>
   );
 };
+
+// Need toast import
+import { toast } from "sonner";
+import { Building2 } from "lucide-react";
 
 export default InfluencerProfile;
