@@ -18,6 +18,7 @@ const CalendarioPage = () => {
   const [bookings, setBookings] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null })[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingSlots, setEditingSlots] = useState<number>(1);
+  const [detailBooking, setDetailBooking] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null }) | null>(null);
 
   const fetchData = async () => {
     if (!influencer) return;
