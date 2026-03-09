@@ -43,8 +43,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro-influenciadora" element={<CadastroInfluenciadora />} />
+            <Route path="/cadastro-cliente" element={<CadastroCliente />} />
             <Route path="/lista-espera" element={<ListaEspera />} />
             <Route path="/lista-espera/:username" element={<ListaEspera />} />
+            <Route path="/agendar/:username" element={<ProtectedRoute><AgendarServico /></ProtectedRoute>} />
 
             {/* Influencer panel */}
             <Route path="/painel" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
