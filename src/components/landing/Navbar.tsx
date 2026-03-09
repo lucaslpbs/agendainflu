@@ -1,10 +1,24 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, isAdmin, isInfluencer, signOut, loading } = useAuth();
+
+  const getDashboardLink = () => {
+    if (isAdmin) return "/admin";
+    if (isInfluencer) return "/painel";
+    return "/cliente";
+  };
+
+  const getDashboardLabel = () => {
+    if (isAdmin) return "Admin";
+    if (isInfluencer) return "Meu Painel";
+    return "Minha Conta";
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -21,12 +35,28 @@ const Navbar = () => {
           <Link to="/" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Influenciadoras
           </Link>
-          <Link to="/cadastro-influenciadora" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
-            Sou influenciadora
-          </Link>
-          <Button variant="hero" size="sm" asChild>
-            <Link to="/login">Entrar</Link>
-          </Button>
+
+          {!loading && !user && (
+            <>
+              <Link to="/cadastro-influenciadora" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+                Sou influenciadora
+              </Link>
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/login">Entrar</Link>
+              </Button>
+            </>
+          )}
+
+          {!loading && user && (
+            <>
+              <Button variant="hero" size="sm" asChild>
+                <Link to={getDashboardLink()}>{getDashboardLabel()}</Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+                <LogOut size={16} />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -44,12 +74,28 @@ const Navbar = () => {
           <Link to="/" className="block text-sm font-medium text-foreground/80" onClick={() => setIsOpen(false)}>
             Influenciadoras
           </Link>
-          <Link to="/cadastro-influenciadora" className="block text-sm font-medium text-foreground/80" onClick={() => setIsOpen(false)}>
-            Sou influenciadora
-          </Link>
-          <Button variant="hero" size="sm" className="w-full" asChild>
-            <Link to="/login">Entrar</Link>
-          </Button>
+
+          {!loading && !user && (
+            <>
+              <Link to="/cadastro-influenciadora" className="block text-sm font-medium text-foreground/80" onClick={() => setIsOpen(false)}>
+                Sou influenciadora
+              </Link>
+              <Button variant="hero" size="sm" className="w-full" asChild>
+                <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+              </Button>
+            </>
+          )}
+
+          {!loading && user && (
+            <>
+              <Button variant="hero" size="sm" className="w-full" asChild>
+                <Link to={getDashboardLink()} onClick={() => setIsOpen(false)}>{getDashboardLabel()}</Link>
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={async () => { await signOut(); setIsOpen(false); }}>
+                <LogOut size={16} /> Sair
+              </Button>
+            </>
+          )}
         </div>
       )}
     </nav>

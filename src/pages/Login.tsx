@@ -28,7 +28,7 @@ const Login = () => {
     } else if (roleList.includes("influencer")) {
       navigate("/painel");
     } else {
-      navigate("/cliente");
+      navigate("/cliente/explorar");
     }
   };
 

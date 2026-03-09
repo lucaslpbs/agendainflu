@@ -19,7 +19,7 @@ import ClientesPage from "./pages/panel/ClientesPage";
 import WaitlistPage from "./pages/panel/WaitlistPage";
 import PerfilPage from "./pages/panel/PerfilPage";
 import { AdminDashboard, AdminInfluenciadoras, AdminClientes, AdminAgendamentos, AdminWaitlist } from "./pages/admin/AdminPages";
-import { ClientBookings, ClientProfile } from "./pages/client/ClientPages";
+import { ClientBookings, ClientProfile, ClientExplore } from "./pages/client/ClientPages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +66,7 @@ const App = () => (
 
             {/* Client panel */}
             <Route path="/cliente" element={<ProtectedRoute><ClientBookings /></ProtectedRoute>} />
+            <Route path="/cliente/explorar" element={<ProtectedRoute><ClientExplore /></ProtectedRoute>} />
             <Route path="/cliente/perfil" element={<ProtectedRoute><ClientProfile /></ProtectedRoute>} />
 
             {/* Public influencer profile - must be last */}
