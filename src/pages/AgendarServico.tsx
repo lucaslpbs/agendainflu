@@ -218,7 +218,7 @@ const AgendarServico = () => {
     );
   }
 
-  const chosenService = services.find(s => s.id === selectedService);
+  // chosenService already defined above
 
   if (success) {
     const whatsappMsg = encodeURIComponent(
