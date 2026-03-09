@@ -153,6 +153,13 @@ const AgendamentosPage = () => {
           </div>
         )}
       </div>
+
+      <BookingDetailDialog
+        booking={selectedBooking}
+        open={!!selectedBooking}
+        onOpenChange={(open) => !open && setSelectedBooking(null)}
+        onUpdateStatus={updateStatus}
+      />
     </PanelLayout>
   );
 };
