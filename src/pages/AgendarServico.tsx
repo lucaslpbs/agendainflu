@@ -342,11 +342,47 @@ const AgendarServico = () => {
 
             {/* Details */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Descrição do produto/serviço</label>
+              <label className="text-sm font-medium mb-1.5 block">
+                Descrição do produto/serviço {isOnlineService && <span className="text-destructive">*</span>}
+              </label>
               <textarea rows={2} value={descricaoProduto} onChange={(e) => setDescricaoProduto(e.target.value)}
                 placeholder="Descreva o produto ou serviço que deseja divulgar..."
                 className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
             </div>
+
+            {/* Kit Mídia - only for online services */}
+            {isOnlineService && (
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Kit Mídia — Fotos do produto <span className="text-destructive">*</span>
+                </label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Envie fotos e materiais sobre o produto para a influenciadora criar o conteúdo. (máx. 5 arquivos)
+                </p>
+                <div className="space-y-3">
+                  {kitMidiaFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {kitMidiaFiles.map((file, i) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border text-sm">
+                          <Image size={14} className="text-primary shrink-0" />
+                          <span className="truncate max-w-[150px]">{file.name}</span>
+                          <button type="button" onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {kitMidiaFiles.length < 5 && (
+                    <label className="flex items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 cursor-pointer transition-colors bg-secondary/30">
+                      <Upload size={18} className="text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Clique para adicionar fotos</span>
+                      <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleFileSelect} />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">Link do seu negócio</label>
