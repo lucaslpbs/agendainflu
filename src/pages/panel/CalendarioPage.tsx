@@ -214,7 +214,7 @@ const CalendarioPage = () => {
                   {selectedBookings.length > 0 ? (
                     <div className="space-y-3">
                       {selectedBookings.map((b) => (
-                        <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border">
+                        <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border cursor-pointer hover:bg-secondary/80 transition-colors" onClick={() => setDetailBooking(b)}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-sm">{b.clients?.nome || "Cliente"}</span>
                             {statusBadge(b.status)}
