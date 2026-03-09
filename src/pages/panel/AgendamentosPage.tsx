@@ -8,6 +8,7 @@ import { Check, X, MessageCircle, Calendar } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 
 type BookingWithRelations = Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null };
 
