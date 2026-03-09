@@ -155,7 +155,7 @@ const InfluencerProfile = () => {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-foreground px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
                     >
-                      <Instagram size={14} className="text-pink-500" />
+                      <Instagram size={14} className="text-primary" />
                       @{instagramHandle}
                       <ExternalLink size={10} className="text-muted-foreground" />
                     </a>
