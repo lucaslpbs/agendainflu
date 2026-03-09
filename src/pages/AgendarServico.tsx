@@ -76,6 +76,7 @@ const AgendarServico = () => {
     return format(d, "yyyy-MM-dd");
   });
 
+  const chosenService = services.find(s => s.id === selectedService);
   const isOnlineService = chosenService && chosenService.formato === "online";
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
