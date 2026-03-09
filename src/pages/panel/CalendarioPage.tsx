@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X } from "lucid
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 
 const CalendarioPage = () => {
   const { influencer } = useAuth();
