@@ -59,6 +59,8 @@ export type Database = {
           link_negocio: string | null
           material_url: string | null
           observacoes: string | null
+          pagamento_confirmado: boolean
+          pagamento_confirmado_em: string | null
           service_id: string
           status: Database["public"]["Enums"]["booking_status"]
         }
@@ -74,6 +76,8 @@ export type Database = {
           link_negocio?: string | null
           material_url?: string | null
           observacoes?: string | null
+          pagamento_confirmado?: boolean
+          pagamento_confirmado_em?: string | null
           service_id: string
           status?: Database["public"]["Enums"]["booking_status"]
         }
@@ -89,6 +93,8 @@ export type Database = {
           link_negocio?: string | null
           material_url?: string | null
           observacoes?: string | null
+          pagamento_confirmado?: boolean
+          pagamento_confirmado_em?: string | null
           service_id?: string
           status?: Database["public"]["Enums"]["booking_status"]
         }
@@ -116,6 +122,45 @@ export type Database = {
           },
         ]
       }
+      client_profiles: {
+        Row: {
+          cnpj: string | null
+          cpf: string | null
+          criado_em: string
+          email: string
+          endereco: string | null
+          id: string
+          nome: string
+          razao_social: string | null
+          user_id: string
+          whatsapp: string
+        }
+        Insert: {
+          cnpj?: string | null
+          cpf?: string | null
+          criado_em?: string
+          email: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          razao_social?: string | null
+          user_id: string
+          whatsapp: string
+        }
+        Update: {
+          cnpj?: string | null
+          cpf?: string | null
+          criado_em?: string
+          email?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          razao_social?: string | null
+          user_id?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           criado_em: string
@@ -128,6 +173,7 @@ export type Database = {
           notas: string | null
           origem: Database["public"]["Enums"]["client_origin"]
           status: Database["public"]["Enums"]["client_status"]
+          user_id: string | null
           whatsapp: string
         }
         Insert: {
@@ -141,6 +187,7 @@ export type Database = {
           notas?: string | null
           origem?: Database["public"]["Enums"]["client_origin"]
           status?: Database["public"]["Enums"]["client_status"]
+          user_id?: string | null
           whatsapp: string
         }
         Update: {
@@ -154,6 +201,7 @@ export type Database = {
           notas?: string | null
           origem?: Database["public"]["Enums"]["client_origin"]
           status?: Database["public"]["Enums"]["client_status"]
+          user_id?: string | null
           whatsapp?: string
         }
         Relationships: [
