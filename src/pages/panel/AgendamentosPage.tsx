@@ -8,6 +8,7 @@ import { Check, X, MessageCircle, Calendar } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 
 type BookingWithRelations = Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null };
 
@@ -15,6 +16,7 @@ const AgendamentosPage = () => {
   const { influencer } = useAuth();
   const [bookings, setBookings] = useState<BookingWithRelations[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState<BookingWithRelations | null>(null);
 
   const fetchBookings = async () => {
     if (!influencer) return;
@@ -102,7 +104,7 @@ const AgendamentosPage = () => {
                 {/* Bookings for this date */}
                 <div className="space-y-2 ml-2">
                   {dayBookings.map((b) => (
-                    <div key={b.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-rosa transition-all">
+                    <div key={b.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-rosa transition-all cursor-pointer" onClick={() => setSelectedBooking(b)}>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -151,6 +153,13 @@ const AgendamentosPage = () => {
           </div>
         )}
       </div>
+
+      <BookingDetailDialog
+        booking={selectedBooking}
+        open={!!selectedBooking}
+        onOpenChange={(open) => !open && setSelectedBooking(null)}
+        onUpdateStatus={updateStatus}
+      />
     </PanelLayout>
   );
 };

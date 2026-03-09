@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft, Upload, X, Image } from "lucide-react";
 import { format, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
@@ -36,6 +36,8 @@ const AgendarServico = () => {
   const [descricaoProduto, setDescricaoProduto] = useState("");
   const [linkNegocio, setLinkNegocio] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [kitMidiaFiles, setKitMidiaFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
@@ -74,15 +76,37 @@ const AgendarServico = () => {
     return format(d, "yyyy-MM-dd");
   });
 
+  const chosenService = services.find(s => s.id === selectedService);
+  const isOnlineService = chosenService && chosenService.formato === "online";
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (kitMidiaFiles.length + files.length > 5) {
+      toast.error("Máximo de 5 arquivos");
+      return;
+    }
+    setKitMidiaFiles((prev) => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setKitMidiaFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !influencer || !selectedService || !selectedDate) return;
+
+    // Validate kit mídia for online services
+    if (isOnlineService && kitMidiaFiles.length === 0 && !descricaoProduto.trim()) {
+      toast.error("Para serviços online, envie o kit mídia (fotos) ou descreva o produto.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       let clientId = existingClient?.id;
 
-      // If no client relationship exists, create one
       if (!clientId) {
         const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
           influencer_id: influencer.id,
@@ -91,7 +115,7 @@ const AgendarServico = () => {
           whatsapp: clientProfile?.whatsapp || "",
           email: user.email || "",
           empresa: clientProfile?.razao_social || clientProfile?.nome || null,
-          status: "espera" as const, // New clients wait for approval
+          status: "espera" as const,
           origem: "site" as const,
         }).select().single();
 
@@ -99,7 +123,21 @@ const AgendarServico = () => {
         clientId = newClient.id;
       }
 
-      // Determine initial booking status
+      // Upload kit mídia files
+      let materialUrls: string[] = [];
+      if (kitMidiaFiles.length > 0) {
+        setUploadingFiles(true);
+        for (const file of kitMidiaFiles) {
+          const fileExt = file.name.split(".").pop();
+          const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage.from("materials").upload(filePath, file);
+          if (uploadErr) throw uploadErr;
+          const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
+          materialUrls.push(urlData.publicUrl);
+        }
+        setUploadingFiles(false);
+      }
+
       const isApproved = existingClient?.status === "ativo";
 
       const { data: booking, error: bookingErr } = await supabase.from("bookings").insert({
@@ -110,8 +148,9 @@ const AgendarServico = () => {
         descricao_produto: descricaoProduto || null,
         link_negocio: linkNegocio || null,
         observacoes: observacoes || null,
+        material_url: materialUrls.length > 0 ? materialUrls.join(",") : null,
         status: isApproved ? "confirmado" : "pendente",
-        codigo_confirmacao: "TEMP", // trigger will generate
+        codigo_confirmacao: "TEMP",
       }).select().single();
 
       if (bookingErr) throw bookingErr;
@@ -179,7 +218,7 @@ const AgendarServico = () => {
     );
   }
 
-  const chosenService = services.find(s => s.id === selectedService);
+  // chosenService already defined above
 
   if (success) {
     const whatsappMsg = encodeURIComponent(
@@ -303,11 +342,47 @@ const AgendarServico = () => {
 
             {/* Details */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Descrição do produto/serviço</label>
+              <label className="text-sm font-medium mb-1.5 block">
+                Descrição do produto/serviço {isOnlineService && <span className="text-destructive">*</span>}
+              </label>
               <textarea rows={2} value={descricaoProduto} onChange={(e) => setDescricaoProduto(e.target.value)}
                 placeholder="Descreva o produto ou serviço que deseja divulgar..."
                 className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
             </div>
+
+            {/* Kit Mídia - only for online services */}
+            {isOnlineService && (
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Kit Mídia — Fotos do produto <span className="text-destructive">*</span>
+                </label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Envie fotos e materiais sobre o produto para a influenciadora criar o conteúdo. (máx. 5 arquivos)
+                </p>
+                <div className="space-y-3">
+                  {kitMidiaFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {kitMidiaFiles.map((file, i) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border text-sm">
+                          <Image size={14} className="text-primary shrink-0" />
+                          <span className="truncate max-w-[150px]">{file.name}</span>
+                          <button type="button" onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {kitMidiaFiles.length < 5 && (
+                    <label className="flex items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 cursor-pointer transition-colors bg-secondary/30">
+                      <Upload size={18} className="text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Clique para adicionar fotos</span>
+                      <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleFileSelect} />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">Link do seu negócio</label>
@@ -342,8 +417,8 @@ const AgendarServico = () => {
               </div>
             )}
 
-            <Button variant="hero" size="lg" className="w-full" disabled={submitting || !selectedService || !selectedDate}>
-              {submitting ? "Agendando..." : existingClient?.status === "ativo" ? "Confirmar e Pagar" : "Enviar para aprovação"}
+            <Button variant="hero" size="lg" className="w-full" disabled={submitting || uploadingFiles || !selectedService || !selectedDate}>
+              {uploadingFiles ? "Enviando arquivos..." : submitting ? "Agendando..." : existingClient?.status === "ativo" ? "Confirmar e Pagar" : "Enviar para aprovação"}
             </Button>
           </form>
         </div>

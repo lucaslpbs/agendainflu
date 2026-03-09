@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X } from "lucid
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 
 const CalendarioPage = () => {
   const { influencer } = useAuth();
@@ -17,6 +18,7 @@ const CalendarioPage = () => {
   const [bookings, setBookings] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null })[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingSlots, setEditingSlots] = useState<number>(1);
+  const [detailBooking, setDetailBooking] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null }) | null>(null);
 
   const fetchData = async () => {
     if (!influencer) return;
@@ -32,6 +34,13 @@ const CalendarioPage = () => {
   };
 
   useEffect(() => { fetchData(); }, [influencer, currentMonth]);
+
+  const updateBookingStatus = async (id: string, status: "confirmado" | "cancelado" | "concluido") => {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(`Agendamento ${status}!`);
+    fetchData();
+  };
 
   const toggleBlock = async (date: string) => {
     if (!influencer) return;
@@ -212,7 +221,7 @@ const CalendarioPage = () => {
                   {selectedBookings.length > 0 ? (
                     <div className="space-y-3">
                       {selectedBookings.map((b) => (
-                        <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border">
+                        <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border cursor-pointer hover:bg-secondary/80 transition-colors" onClick={() => setDetailBooking(b)}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-sm">{b.clients?.nome || "Cliente"}</span>
                             {statusBadge(b.status)}
@@ -239,6 +248,13 @@ const CalendarioPage = () => {
           </div>
         </div>
       </div>
+
+      <BookingDetailDialog
+        booking={detailBooking}
+        open={!!detailBooking}
+        onOpenChange={(open) => !open && setDetailBooking(null)}
+        onUpdateStatus={updateBookingStatus}
+      />
     </PanelLayout>
   );
 };
