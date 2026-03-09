@@ -104,7 +104,7 @@ const AgendamentosPage = () => {
                 {/* Bookings for this date */}
                 <div className="space-y-2 ml-2">
                   {dayBookings.map((b) => (
-                    <div key={b.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-rosa transition-all">
+                    <div key={b.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-rosa transition-all cursor-pointer" onClick={() => setSelectedBooking(b)}>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
