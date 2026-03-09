@@ -36,6 +36,8 @@ const AgendarServico = () => {
   const [descricaoProduto, setDescricaoProduto] = useState("");
   const [linkNegocio, setLinkNegocio] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [kitMidiaFiles, setKitMidiaFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
