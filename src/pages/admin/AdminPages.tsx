@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, UserCheck, BarChart3, LogOut, Menu, X, CheckCircle, XCircle, Eye
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
-import { useState as useStateR } from "react";
+
 
 const AdminLayout = ({ children, title }: { children: React.ReactNode; title: string }) => {
   const { signOut } = useAuth();
