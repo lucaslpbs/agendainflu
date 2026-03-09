@@ -238,6 +238,11 @@ const InfluencerProfile = () => {
         </div>
       </div>
 
+      {/* Instagram Feed */}
+      <div className="container max-w-5xl mt-10">
+        <InstagramFeed instagramUrl={influencer.instagram_url} instagramHandle={instagramHandle} />
+      </div>
+
       {/* Services - show types always, prices only for logged in */}
       <div className="container max-w-5xl mt-10">
         <div className="flex items-center gap-2 mb-6">
