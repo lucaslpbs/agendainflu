@@ -35,6 +35,13 @@ const CalendarioPage = () => {
 
   useEffect(() => { fetchData(); }, [influencer, currentMonth]);
 
+  const updateBookingStatus = async (id: string, status: "confirmado" | "cancelado" | "concluido") => {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(`Agendamento ${status}!`);
+    fetchData();
+  };
+
   const toggleBlock = async (date: string) => {
     if (!influencer) return;
     const existing = availability.find((a) => a.data === date);
