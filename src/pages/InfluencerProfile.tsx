@@ -153,7 +153,7 @@ const InfluencerProfile = () => {
                       href={influencer.instagram_url!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-foreground px-3 py-1.5 rounded-full hover:from-purple-500/20 hover:to-pink-500/20 transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-foreground px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
                     >
                       <Instagram size={14} className="text-pink-500" />
                       @{instagramHandle}
