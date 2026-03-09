@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft, Upload, X, Image } from "lucide-react";
 import { format, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
