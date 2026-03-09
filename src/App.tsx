@@ -16,7 +16,8 @@ import ServicosPage from "./pages/panel/ServicosPage";
 import ClientesPage from "./pages/panel/ClientesPage";
 import WaitlistPage from "./pages/panel/WaitlistPage";
 import PerfilPage from "./pages/panel/PerfilPage";
-import { AdminDashboard, AdminInfluenciadoras, AdminClientes } from "./pages/admin/AdminPages";
+import { AdminDashboard, AdminInfluenciadoras, AdminClientes, AdminAgendamentos, AdminWaitlist } from "./pages/admin/AdminPages";
+import { ClientBookings, ClientProfile } from "./pages/client/ClientPages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,7 +56,13 @@ const App = () => (
             {/* Admin panel */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/influenciadoras" element={<ProtectedRoute requiredRole="admin"><AdminInfluenciadoras /></ProtectedRoute>} />
+            <Route path="/admin/agendamentos" element={<ProtectedRoute requiredRole="admin"><AdminAgendamentos /></ProtectedRoute>} />
             <Route path="/admin/clientes" element={<ProtectedRoute requiredRole="admin"><AdminClientes /></ProtectedRoute>} />
+            <Route path="/admin/lista-espera" element={<ProtectedRoute requiredRole="admin"><AdminWaitlist /></ProtectedRoute>} />
+
+            {/* Client panel */}
+            <Route path="/cliente" element={<ProtectedRoute><ClientBookings /></ProtectedRoute>} />
+            <Route path="/cliente/perfil" element={<ProtectedRoute><ClientProfile /></ProtectedRoute>} />
 
             {/* Public influencer profile - must be last */}
             <Route path="/:username" element={<InfluencerProfile />} />

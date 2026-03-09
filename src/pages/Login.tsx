@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
@@ -13,16 +14,36 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"password" | "magic">("password");
 
+  const redirectByRole = async (userId: string) => {
+    // Check roles to redirect appropriately
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    const roleList = roles?.map((r) => r.role) || [];
+
+    if (roleList.includes("admin")) {
+      navigate("/admin");
+    } else if (roleList.includes("influencer")) {
+      navigate("/painel");
+    } else {
+      navigate("/cliente");
+    }
+  };
+
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
       toast.success("Login realizado com sucesso!");
-      navigate("/painel");
+      if (data.user) {
+        await redirectByRole(data.user.id);
+      }
     }
   };
 
