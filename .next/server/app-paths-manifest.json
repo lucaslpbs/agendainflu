@@ -1,0 +1,6 @@
+{
+  "/api/influencers/route": "app/api/influencers/route.js",
+  "/api/auth/exchange/route": "app/api/auth/exchange/route.js",
+  "/(public)/[username]/page": "app/(public)/[username]/page.js",
+  "/page": "app/page.js"
+}

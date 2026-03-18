@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(sed -i \"s|import { ReactNode } from \"\"react\"\";|''use client''\\\\n\\\\nimport { ReactNode } from \"\"react\"\";|\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|import { Link, useLocation, useNavigate } from \"\"react-router-dom\"\";|import Link from \"\"next/link\"\";\\\\nimport { usePathname, useRouter } from \"\"next/navigation\"\";|\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|const location = useLocation\\(\\);|const pathname = usePathname\\(\\);|\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|const navigate = useNavigate\\(\\);|const router = useRouter\\(\\);|\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|navigate\\(\"\"/\"\"\\);|router.push\\(\"\"/\"\"\\);|\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|location\\\\.pathname === item\\\\.path|pathname === item.path|g\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|location\\\\.pathname|pathname|g\" src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i 's|<Link to=\"\"/\"\"|<Link href=\"\"/\"\"|g' src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i 's|to={item\\\\.path}|href={item.path}|g' src/components/panel/PanelLayout.tsx)",
+      "Bash(sed -i \"s|const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;|const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;|\" src/integrations/supabase/client.ts)",
+      "Bash(sed -i \"s|const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;|const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;|\" src/integrations/supabase/client.ts)",
+      "Bash(.env.local:*)",
+      "Bash(.env.example:*)",
+      "Bash(timeout 30 npm run dev)",
+      "Bash(timeout 120 npm run build)",
+      "Bash(\"c:/Users/lucas/source/repos/agendainflu/.env.example\":*)",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[username]\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[id]/availability\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/services/[id]\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/bookings/[id]/status\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/clients/[id]/status\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/waitlist/[id]/status\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/admin/influencers/[id]/approve\")",
+      "Bash(mkdir -p \"c:/Users/lucas/source/repos/agendainflu/src/app/api/admin/influencers/[id]/reject\")",
+      "Bash(npm run:*)",
+      "Bash(rm -rf \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[username]\")",
+      "Bash(rm -rf \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[id]\")",
+      "Bash(cmd /c \"rmdir /s /q .next\")",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

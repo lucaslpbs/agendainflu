@@ -1,9 +1,9 @@
+'use client'
+
 import { useEffect, useState } from "react";
 import { Star, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import Link from "next/link";
 
 const fallbackInfluencers = [
   { username: "juliana", nome: "Juliana Martins", nicho: "Moda & Lifestyle", seguidores: "120K", foto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop" },
@@ -13,20 +13,21 @@ const fallbackInfluencers = [
 ];
 
 const FeaturedInfluencers = () => {
-  const [influencers, setInfluencers] = useState<Tables<"influencers">[]>([]);
+  const [influencers, setInfluencers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("status", "ativa")
-        .limit(8);
-      setInfluencers(data || []);
-      setLoading(false);
+    const load = async () => {
+      try {
+        const { data } = await window.fetch('/api/influencers?limit=8').then(r => r.json());
+        setInfluencers(data || []);
+      } catch {
+        // fallback já definido no estado inicial
+      } finally {
+        setLoading(false);
+      }
     };
-    fetch();
+    load();
   }, []);
 
   const displayData = influencers.length > 0
@@ -84,7 +85,7 @@ const FeaturedInfluencers = () => {
                   </div>
 
                   <Button variant="hero" size="sm" className="w-full" asChild>
-                    <Link to={`/${inf.username}`}>Ver perfil</Link>
+                    <Link href={`/${inf.username}`}>Ver perfil</Link>
                   </Button>
                 </div>
               </div>

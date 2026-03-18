@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+'use client'
+
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import heroBg from "@/assets/hero-bg.jpg";
 
@@ -29,10 +31,10 @@ const HeroSection = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <Button variant="hero" size="lg" asChild>
-              <Link to="/lista-espera">Quero divulgar</Link>
+              <Link href="/lista-espera">Quero divulgar</Link>
             </Button>
             <Button variant="hero-outline" size="lg" asChild>
-              <Link to="/cadastro-influenciadora">Sou influenciadora</Link>
+              <Link href="/cadastro-influenciadora">Sou influenciadora</Link>
             </Button>
           </div>
         </div>

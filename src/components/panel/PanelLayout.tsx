@@ -1,5 +1,8 @@
+'use client'
+
 import { ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Calendar, ClipboardList, Briefcase, Users, Clock, UserCircle, LogOut, Menu, X
@@ -19,13 +22,13 @@ const menuItems = [
 
 const PanelLayout = ({ children }: { children: ReactNode }) => {
   const { signOut, influencer } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    router.push("/");
   };
 
   return (
@@ -39,7 +42,7 @@ const PanelLayout = ({ children }: { children: ReactNode }) => {
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-border flex items-center justify-between">
-            <Link to="/" className="font-display text-xl font-bold text-primary">
+            <Link href="/" className="font-display text-xl font-bold text-primary">
               Agenda<span className="text-gradient-gold">Influ</span>
             </Link>
             <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
@@ -49,11 +52,11 @@ const PanelLayout = ({ children }: { children: ReactNode }) => {
 
           <nav className="flex-1 p-4 space-y-1">
             {menuItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = pathname === item.path;
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  href={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
@@ -92,7 +95,7 @@ const PanelLayout = ({ children }: { children: ReactNode }) => {
             <Menu size={24} />
           </button>
           <h2 className="font-display text-lg font-semibold">
-            {menuItems.find((i) => i.path === location.pathname)?.label || "Painel"}
+            {menuItems.find((i) => i.path === pathname)?.label || "Painel"}
           </h2>
         </header>
         <main className="flex-1 p-6 lg:p-8 overflow-auto">
