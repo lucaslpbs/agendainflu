@@ -1,235 +1,242 @@
-# AgendaInflu — Índice de Documentação
+# AgendaInflu — Índice Mestre de Documentação
 
-> Gerado em: 2026-03-18 | Atualizado: 2026-03-18
-> Status geral: `Backend implementado — API Routes + middleware ativos`
-> Framework: Next.js 14 App Router + TypeScript + Supabase
+> **Gerado em:** 2026-03-18
+> **Status geral:** Backend implementado — API Routes + Middleware ativos
+> **Framework:** Next.js 14 App Router + TypeScript + Supabase
+
+---
+
+## Navegação rápida
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Stack, diagramas, decisões técnicas, variáveis de ambiente, deploy
+- [DATABASE.md](DATABASE.md) — Todas as tabelas, ENUMs, SQL functions, Storage, RLS
+- [SDR.md](SDR.md) — Bot de vendas n8n (planejado)
+- [middleware.md](middleware.md) — Proteção de rotas Edge (JWT)
+- [components/AuthContext.md](components/AuthContext.md) — Contexto global de autenticação
 
 ---
 
 ## Visão Geral da Arquitetura
 
+```text
+BROWSER
+├── React Views (src/views/) + Components (src/components/)
+├── AuthContext — sessão Supabase + JWT próprio em localStorage
+└── apiFetch() → Authorization: Bearer <agenda-token>
+          │
+          ▼ HTTPS
+NEXT.JS SERVER
+├── src/middleware.ts (Edge) — verifica cookie auth-token, protege rotas por role
+└── src/app/api/** (Node.js) — API Routes com service_role Supabase + JWT auth
+          │
+          ├──→ SUPABASE (PostgreSQL + Auth + Storage)
+          └──→ EVOLUTION API (WhatsApp)
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        BROWSER (client)                          │
-│                                                                  │
-│  src/app/ (Next.js App Router)                                   │
-│  ├── layout.tsx ← Providers (QueryClient + Auth + Toast)         │
-│  ├── page.tsx ← Landing                                          │
-│  ├── (auth)/ ← login, cadastro-influenciadora, cadastro-cliente  │
-│  ├── (public)/ ← [username], agendar/[username], lista-espera    │
-│  ├── painel/ ← Dashboard + 6 subpáginas (influencer)             │
-│  ├── cliente/ ← Explorar + Agendamentos + Perfil (empresa)       │
-│  └── admin/ ← Dashboard + 4 subpáginas (admin)                   │
-│                                                                  │
-│  src/views/ ← Componentes de página (lógica + UI)               │
-│  src/components/ ← Componentes reutilizáveis                     │
-│  src/contexts/AuthContext ← Estado global de auth                │
-│                                                                  │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │ Supabase JS Client (anon key)
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                    SUPABASE (Backend)                            │
-│                                                                  │
-│  Auth ── user_roles ── influencers ── services ── bookings       │
-│                    └── clients ──────────────────────┘           │
-│                    └── waitlist                                  │
-│                    └── availability                              │
-│  Storage: avatars (fotos), materials (kit mídia)                 │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
 
-NOTA: Não há App Routes (src/app/api/) — toda comunicação é
-      direta frontend → Supabase via anon key.
-```
+---
+
+## Libs Utilitárias
+
+Diretório: `src/lib/`
+
+| Arquivo | Doc | Responsabilidade |
+| --- | --- | --- |
+| `db.ts` | [lib/db.md](lib/db.md) | Supabase client com service_role (server-side, bypassa RLS) |
+| `jwt.ts` | [lib/jwt.md](lib/jwt.md) | `signJWT` / `verifyJWT` — HS256, 7 dias, compatível com Edge |
+| `auth.ts` | [lib/auth.md](lib/auth.md) | `requireAuth`, `requireInfluencer`, `requireAdmin` — lê cookie ou header |
+| `errors.ts` | [lib/errors.md](lib/errors.md) | `apiError()` — mapeia erros para status HTTP |
+| `booking-code.ts` | [lib/booking-code.md](lib/booking-code.md) | `generateBookingCode()` — gera `AI-YYYY-NNNN` |
+| `wa.ts` | [lib/wa.md](lib/wa.md) | `sendWhatsApp()` — Evolution API, falha silenciosa |
+| `apiFetch.ts` | [lib/apiFetch.md](lib/apiFetch.md) | Fetch client-side com JWT do localStorage |
+| `utils.ts` | [lib/utils.md](lib/utils.md) | `cn()` — clsx + tailwind-merge |
+
+---
+
+## API Routes
+
+Diretório: `src/app/api/`
+
+### Auth
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/auth/exchange` | POST | Supabase token | [exchange.md](app/api/auth/exchange.md) | Troca token Supabase por JWT; seta cookie `auth-token` |
+| `/api/auth/logout` | POST | — | [logout.md](app/api/auth/logout.md) | Limpa cookie `auth-token` |
+| `/api/auth/me` | GET | JWT | [me.md](app/api/auth/me.md) | Dados do usuário pelo token |
+| `/api/auth/register/influencer` | POST | — | [register-influencer.md](app/api/auth/register-influencer.md) | Cria influencer `em_analise` + notifica admin |
+| `/api/auth/register/client` | POST | — | [register-client.md](app/api/auth/register-client.md) | Cria `client_profiles` + `user_roles` |
+
+### Influencers
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/influencers` | GET | Opcional | [list.md](app/api/influencers/list.md) | Lista ativas (filtros: nicho, busca, limit) |
+| `/api/influencers/[slug]` | GET | Opcional | [slug.md](app/api/influencers/slug.md) | Perfil por username; preços ocultos sem auth |
+| `/api/influencers/[slug]` | PATCH | Influencer/Admin | [slug.md](app/api/influencers/slug.md) | Atualiza perfil |
+| `/api/influencers/[slug]/availability` | GET | — | [availability.md](app/api/influencers/availability.md) | Disponibilidade (aceita UUID ou username) |
+
+### Services
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/services` | GET | — | [services.md](app/api/services/services.md) | Serviços por `influencer_id` |
+| `/api/services` | POST | Influencer | [services.md](app/api/services/services.md) | Cria serviço |
+| `/api/services/[id]` | PATCH | Influencer | [service-id.md](app/api/services/service-id.md) | Atualiza serviço |
+| `/api/services/[id]` | DELETE | Influencer | [service-id.md](app/api/services/service-id.md) | Soft-delete se tem bookings; hard-delete caso contrário |
+
+### Bookings
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/bookings` | POST | Cliente | [bookings.md](app/api/bookings/bookings.md) | Cria booking com código `AI-YYYY-NNNN`; verifica disponibilidade |
+| `/api/bookings` | GET | Influencer | [bookings.md](app/api/bookings/bookings.md) | Bookings da influencer (filtros: status, data) |
+| `/api/bookings/client` | GET | Cliente | [bookings-client.md](app/api/bookings/bookings-client.md) | Bookings do cliente por `user_id` |
+| `/api/bookings/[id]/status` | PATCH | Influencer/Admin | [bookings-status.md](app/api/bookings/bookings-status.md) | Transições de status validadas + WA |
+
+### Clients
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/clients` | GET | Influencer | [clients.md](app/api/clients/clients.md) | Clientes da influencer (search) |
+| `/api/clients` | POST | Influencer | [clients.md](app/api/clients/clients.md) | Cria cliente; verifica duplicata por WhatsApp |
+| `/api/clients/[id]/status` | PATCH | Influencer | [clients-status.md](app/api/clients/clients-status.md) | Altera status: `ativo` / `bloqueado` |
+
+### Waitlist
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/waitlist` | POST | — | [waitlist.md](app/api/waitlist/waitlist.md) | Insere lead; check duplicata; notifica WA |
+| `/api/waitlist` | GET | Influencer | [waitlist.md](app/api/waitlist/waitlist.md) | Waitlist da influencer |
+| `/api/waitlist/[id]/status` | PATCH | Influencer | [waitlist-status.md](app/api/waitlist/waitlist-status.md) | Aprovação → upsert em `clients` + WA |
+
+### Availability
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/availability` | GET | — | [availability.md](app/api/availability/availability.md) | Disponibilidade por mês |
+| `/api/availability` | POST | Influencer | [availability.md](app/api/availability/availability.md) | Upsert de bloqueios/slots |
+
+### Admin
+
+| Rota | Método | Auth | Doc | Descrição |
+| --- | --- | --- | --- | --- |
+| `/api/admin/dashboard` | GET | Admin | [dashboard.md](app/api/admin/dashboard.md) | Stats gerais + bookings recentes |
+| `/api/admin/influencers` | GET | Admin | [admin-influencers.md](app/api/admin/admin-influencers.md) | Lista por status |
+| `/api/admin/influencers/[id]/approve` | POST | Admin | [admin-influencers.md](app/api/admin/admin-influencers.md) | Aprova + checklist + WA |
+| `/api/admin/influencers/[id]/reject` | POST | Admin | [admin-influencers.md](app/api/admin/admin-influencers.md) | Rejeita + motivo + WA |
 
 ---
 
 ## Páginas
 
-| Rota | Arquivo doc | Descrição | Auth | Status |
-|------|-------------|-----------|------|--------|
-| `/` | [page.md](src/app/page.md) | Landing page | Não | Lovable |
-| `/login` | [(auth)/login.md](src/app/(auth)/login.md) | Autenticação | Não | Lovable |
-| `/cadastro-influenciadora` | [(auth)/cadastro-influenciadora.md](src/app/(auth)/cadastro-influenciadora.md) | Cadastro influencer | Não | Lovable |
-| `/cadastro-cliente` | [(auth)/cadastro-cliente.md](src/app/(auth)/cadastro-cliente.md) | Cadastro empresa | Não | Lovable |
-| `/[username]` | [(public)/username.md](src/app/(public)/username.md) | Perfil público | Não | Lovable |
-| `/agendar/[username]` | [(public)/agendar-username.md](src/app/(public)/agendar-username.md) | Wizard de agendamento | Sim | Lovable |
-| `/lista-espera` | [(public)/lista-espera.md](src/app/(public)/lista-espera.md) | Lista de espera | Não | Lovable |
-| `/lista-espera/[username]` | [(public)/lista-espera.md](src/app/(public)/lista-espera.md) | Lista de espera (influencer) | Não | Lovable |
-| `/painel` | [painel/dashboard.md](src/app/painel/dashboard.md) | Dashboard influencer | Sim (influ.) | Lovable |
-| `/painel/agendamentos` | [painel/agendamentos.md](src/app/painel/agendamentos.md) | Gestão de bookings | Sim (influ.) | Lovable |
-| `/painel/calendario` | [painel/calendario.md](src/app/painel/calendario.md) | Disponibilidade | Sim (influ.) | Lovable |
-| `/painel/servicos` | [painel/servicos.md](src/app/painel/servicos.md) | CRUD de serviços | Sim (influ.) | Lovable |
-| `/painel/clientes` | [painel/clientes.md](src/app/painel/clientes.md) | Base de clientes | Sim (influ.) | Lovable |
-| `/painel/lista-espera` | [painel/lista-espera.md](src/app/painel/lista-espera.md) | Aprovação de leads | Sim (influ.) | Lovable |
-| `/painel/perfil` | [painel/perfil.md](src/app/painel/perfil.md) | Edição de perfil | Sim (influ.) | Lovable |
-| `/cliente` | [cliente/cliente.md](src/app/cliente/cliente.md) | Meus agendamentos | Sim | Lovable |
-| `/cliente/explorar` | [cliente/cliente.md](src/app/cliente/cliente.md) | Explorar influencers | Sim | Lovable |
-| `/cliente/perfil` | [cliente/cliente.md](src/app/cliente/cliente.md) | Perfil da empresa | Sim | Lovable |
-| `/admin` | [admin/admin.md](src/app/admin/admin.md) | Dashboard admin | Sim (admin) | Lovable |
-| `/admin/influenciadoras` | [admin/admin.md](src/app/admin/admin.md) | Aprovação de cadastros | Sim (admin) | Lovable |
-| `/admin/agendamentos` | [admin/admin.md](src/app/admin/admin.md) | Todos os bookings | Sim (admin) | Lovable |
-| `/admin/clientes` | [admin/admin.md](src/app/admin/admin.md) | Base de clientes global | Sim (admin) | Lovable |
-| `/admin/lista-espera` | [admin/admin.md](src/app/admin/admin.md) | Leads globais | Sim (admin) | Lovable |
+| Rota | Doc | Auth | Descrição |
+| --- | --- | --- | --- |
+| `/` | [home.md](app/pages/home.md) | Não | Landing page |
+| `/login` | [login.md](app/pages/login.md) | Não | Login (senha ou Magic Link) |
+| `/cadastro-influenciadora` | [cadastro-influenciadora.md](app/pages/cadastro-influenciadora.md) | Não | Cadastro de influenciadora |
+| `/cadastro-cliente` | [cadastro-cliente.md](app/pages/cadastro-cliente.md) | Não | Cadastro de empresa/cliente |
+| `/[username]` | [perfil-publico.md](app/pages/perfil-publico.md) | Não | Perfil público da influenciadora |
+| `/agendar/[username]` | [agendar.md](app/pages/agendar.md) | Não | Wizard de agendamento |
+| `/lista-espera` | [lista-espera.md](app/pages/lista-espera.md) | Não | Formulário de lista de espera |
+| `/painel` | [painel.md](app/pages/painel.md) | Influencer | Dashboard da influenciadora |
+| `/painel/agendamentos` | [painel.md](app/pages/painel.md) | Influencer | Gestão de bookings |
+| `/painel/calendario` | [painel.md](app/pages/painel.md) | Influencer | Disponibilidade |
+| `/painel/servicos` | [painel.md](app/pages/painel.md) | Influencer | CRUD de serviços |
+| `/painel/clientes` | [painel.md](app/pages/painel.md) | Influencer | Base de clientes |
+| `/painel/lista-espera` | [painel.md](app/pages/painel.md) | Influencer | Aprovação de leads |
+| `/painel/perfil` | [painel.md](app/pages/painel.md) | Influencer | Edição de perfil |
+| `/cliente/explorar` | [cliente.md](app/pages/cliente.md) | Client | Explorar influenciadoras |
+| `/cliente` | [cliente.md](app/pages/cliente.md) | Client | Meus agendamentos |
+| `/cliente/perfil` | [cliente.md](app/pages/cliente.md) | Client | Perfil da empresa |
+| `/admin` | [admin.md](app/pages/admin.md) | Admin | Dashboard admin |
+| `/admin/influenciadoras` | [admin.md](app/pages/admin.md) | Admin | Aprovação de cadastros |
+| `/admin/agendamentos` | [admin.md](app/pages/admin.md) | Admin | Todos os bookings |
+| `/admin/clientes` | [admin.md](app/pages/admin.md) | Admin | Base de clientes global |
+| `/admin/lista-espera` | [admin.md](app/pages/admin.md) | Admin | Leads globais |
 
 ---
 
-## Libs Utilitárias (`src/lib/`)
+## Componentes
 
-| Arquivo | Responsabilidade |
-|---------|-----------------|
-| `db.ts` | Supabase client com service_role key (server-side, bypassa RLS) |
-| `jwt.ts` | `signJWT` / `verifyJWT` — tokens HS256 de 7 dias via `jose` |
-| `auth.ts` | `getAuthUser`, `requireAuth`, `requireInfluencer`, `requireAdmin` — lê cookie `auth-token` ou header `Authorization` |
-| `errors.ts` | `apiError()` — mapeia erros para status HTTP (401/403/404/409/400/500) |
-| `booking-code.ts` | `generateBookingCode()` — gera `AI-YYYY-NNNN` contando bookings do ano |
-| `wa.ts` | `sendWhatsApp()` — Evolution API, falha silenciosa se não configurado |
-| `apiFetch.ts` | `apiFetch()` — client-side fetch que injeta `Authorization: Bearer` do localStorage |
-
----
-
-## API Routes (`src/app/api/`)
-
-> Implementado: todas as rotas protegidas por JWT customizado via `src/lib/auth.ts`.
-> Acesso ao banco via `src/lib/db.ts` (service_role, server-side).
-
-### Auth
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/auth/exchange` | POST | Supabase token | Troca access_token Supabase por JWT customizado; seta cookie `auth-token` |
-| `/api/auth/logout` | POST | — | Limpa cookie `auth-token` |
-| `/api/auth/me` | GET | JWT | Retorna dados do usuário pelo role |
-| `/api/auth/register/influencer` | POST | — | Cria perfil + `user_roles` para influencer pós-signUp |
-| `/api/auth/register/client` | POST | — | [P2✓][P3✓] Cria `client_profiles` tipado + `user_roles` role='client' |
-
-### Influencers
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/influencers` | GET | Opcional | Lista influencers ativas (filtros: nicho, busca, limit) |
-| `/api/influencers/[slug]` | GET | Opcional | Perfil por username; preços ocultos sem auth |
-| `/api/influencers/[slug]` | PATCH | Influencer/Admin | Atualiza perfil |
-| `/api/influencers/[slug]/availability` | GET | — | Disponibilidade (aceita UUID ou username) [P10✓] |
-
-### Services
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/services` | GET | — | Serviços por influencer_id |
-| `/api/services` | POST | Influencer | Cria serviço |
-| `/api/services/[id]` | PATCH | Influencer | Atualiza serviço |
-| `/api/services/[id]` | DELETE | Influencer | Soft-delete se tem bookings, hard-delete se não |
-
-### Bookings
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/bookings` | POST | Cliente | [P1✓] Cria booking com `codigo_confirmacao` real (AI-YYYY-NNNN); [P5✓] material_url como array |
-| `/api/bookings` | GET | Influencer | Bookings da influencer (filtros: status, data) |
-| `/api/bookings/client` | GET | Cliente | Bookings do cliente por user_id |
-| `/api/bookings/[id]/status` | PATCH | Influencer/Admin | Transições de status validadas; notifica WhatsApp |
-
-### Clients / Waitlist / Availability
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/clients` | GET | Influencer | Clientes da influencer (search) |
-| `/api/clients` | POST | Influencer | Cria cliente com check duplicata WhatsApp |
-| `/api/clients/[id]/status` | PATCH | Influencer | ativo/bloqueado |
-| `/api/waitlist` | POST | — | Insere lead; check duplicata; notifica WA |
-| `/api/waitlist` | GET | Influencer | Waitlist da influencer |
-| `/api/waitlist/[id]/status` | PATCH | Influencer | Aprovação cria cliente via upsert |
-| `/api/availability` | GET | — | Disponibilidade por mês |
-| `/api/availability` | POST | Influencer | Upsert de bloqueios/slots |
-
-### Admin
-| Rota | Método | Auth | Descrição |
-|------|--------|------|-----------|
-| `/api/admin/dashboard` | GET | Admin | Stats gerais + bookings recentes |
-| `/api/admin/influencers` | GET | Admin | Lista por status |
-| `/api/admin/influencers/[id]/approve` | POST | Admin | Aprova cadastro + notifica WA |
-| `/api/admin/influencers/[id]/reject` | POST | Admin | Rejeita cadastro + notifica WA |
+| Componente | Doc | Usado em |
+| --- | --- | --- |
+| `AuthContext` | [components/AuthContext.md](components/AuthContext.md) | Todo o app |
+| `Providers` | [components/Providers.md](components/Providers.md) | Root layout |
+| `ProtectedLayout` | [components/ProtectedLayout.md](components/ProtectedLayout.md) | Layouts de área protegida |
+| `PanelLayout` | [components/panel/PanelLayout.md](components/panel/PanelLayout.md) | Todas as páginas `/painel` |
+| `BookingDetailDialog` | [components/panel/BookingDetailDialog.md](components/panel/BookingDetailDialog.md) | Agendamentos, Calendário |
+| `Navbar` | [components/landing/Navbar.md](components/landing/Navbar.md) | Páginas públicas |
+| `HeroSection` | [components/landing/HeroSection.md](components/landing/HeroSection.md) | Landing |
+| `FeaturedInfluencers` | [components/landing/FeaturedInfluencers.md](components/landing/FeaturedInfluencers.md) | Landing |
+| `InstagramFeed` | [components/profile/InstagramFeed.md](components/profile/InstagramFeed.md) | Perfil público (mock) |
+| `UI Library (48 componentes)` | [components/ui/README.md](components/ui/README.md) | Todo o app (shadcn/ui) |
 
 ---
 
-## Middleware (`src/middleware.ts`)
+## Middleware
 
-[P4✓][P6✓][P14✓] Protege rotas server-side lendo cookie `auth-token`:
-- `/painel/*` → requer role `influencer` ou `admin`
-- `/admin/*` → requer role `admin`
-- `/cliente/*` → requer role `client` ou `admin`
-- `/agendar/*` → requer qualquer usuário autenticado
+| Arquivo | Doc | Descrição |
+| --- | --- | --- |
+| `src/middleware.ts` | [middleware.md](middleware.md) | Proteção de rotas por JWT cookie + role (Edge Runtime) |
 
 ---
 
-## Endpoints de API (legado — substituído pelas API Routes acima)
+## Regras de Negócio
+
+| # | Regra | Onde aplicada |
+| --- | --- | --- |
+| RN-01 | Influenciadora entra com status `em_analise`; só fica `ativa` após aprovação admin | `/api/auth/register/influencer`, `/api/admin/influencers/[id]/approve` |
+| RN-02 | Apenas influenciadoras `ativas` aparecem na listagem pública | `/api/influencers` |
+| RN-03 | Preços dos serviços ficam ocultos para usuários não autenticados | `/api/influencers/[slug]` |
+| RN-04 | Código de confirmação gerado server-side no formato `AI-YYYY-NNNN` | `/api/bookings` POST, `src/lib/booking-code.ts` |
+| RN-05 | Agendamento verifica disponibilidade antes de criar (slots + bloqueio) | `/api/bookings` POST |
+| RN-06 | Se o cliente já existe na base da influencer, o booking nasce `confirmado` | `/api/bookings` POST |
+| RN-07 | Máquina de estados: `pendente → confirmado → concluido`; `pendente/confirmado → cancelado` | `/api/bookings/[id]/status` |
+| RN-08 | Notificação WhatsApp enviada ao cliente a cada mudança de status do booking | `/api/bookings/[id]/status` |
+| RN-09 | Duplicata de WhatsApp bloqueada na lista de espera (por influencer_id) | `/api/waitlist` POST |
+| RN-10 | Aprovação de waitlist faz upsert em `clients` com `origem='site'` | `/api/waitlist/[id]/status` |
+| RN-11 | Aprovação admin requer checklist completo (todos os 5 itens `true`) | `/api/admin/influencers/[id]/approve` |
+| RN-12 | Rejeição admin requer motivo obrigatório | `/api/admin/influencers/[id]/reject` |
+| RN-13 | Receita calculada apenas de bookings `confirmado` ou `concluido` | `/api/admin/dashboard` |
+| RN-14 | Soft delete de serviço quando há bookings vinculados (`ativo=false`) | `/api/services/[id]` DELETE |
+| RN-15 | JWT customizado com role incluso; válido por 7 dias (HS256) | `src/lib/jwt.ts` |
+| RN-16 | Middleware Edge protege `/painel`, `/admin`, `/cliente`, `/agendar` por role | `src/middleware.ts` |
+| RN-17 | Notificação ao admin via WhatsApp para cada novo cadastro de influenciadora | `/api/auth/register/influencer` |
+| RN-18 | Duplicata de WhatsApp bloqueada na base de clientes (por influencer_id) | `/api/clients` POST |
 
 ---
 
-## Componentes Principais
+## Dados Mockados (a substituir)
 
-| Componente | Arquivo doc | Usado em | Status |
-|-----------|-------------|----------|--------|
-| PanelLayout | [PanelLayout.md](src/components/panel/PanelLayout.md) | Todas as páginas /painel | Lovable |
-| BookingDetailDialog | [BookingDetailDialog.md](src/components/panel/BookingDetailDialog.md) | Agendamentos, Calendário | Lovable |
-| InstagramFeed | [InstagramFeed.md](src/components/profile/InstagramFeed.md) | InfluencerProfile | Lovable (mock) |
-| Navbar | [Navbar.md](src/components/landing/Navbar.md) | Todas as páginas públicas | Lovable |
-| HeroSection | [HeroSection.md](src/components/landing/HeroSection.md) | Landing | Lovable (mock) |
-| FeaturedInfluencers | [FeaturedInfluencers.md](src/components/landing/FeaturedInfluencers.md) | Landing | Lovable (real) |
-| Providers | [Providers.md](src/components/Providers.md) | Root layout | Lovable |
-| ProtectedLayout | [ProtectedLayout.md](src/components/ProtectedLayout.md) | Layouts auth | Lovable |
-| UI Library (49 componentes) | [ui/README.md](src/components/ui/README.md) | Todo o app | shadcn/ui |
+| O que | Onde | Substitui |
+| --- | --- | --- |
+| Feed Instagram (6 imagens Unsplash) | `InstagramFeed.tsx` | Meta Graph API |
+| Influenciadoras fallback (4 fictícias) | `FeaturedInfluencers.tsx` | Dados reais do banco |
+| Avaliações e depoimentos | `InfluencerProfile` | Sistema de reviews real |
+| Estatísticas (campanhas, engajamento) | `InfluencerProfile` | Métricas calculadas dos bookings |
 
 ---
 
-## Contexts e Estado Global
+## Pendências
 
-| Context | Arquivo doc | Responsabilidade |
-|---------|-------------|-----------------|
-| AuthContext | [AuthContext.md](src/contexts/AuthContext.md) | Sessão, roles, dados da influencer |
-
-> Não há Zustand nem outros stores — apenas React Context + TanStack Query.
-
----
-
-## Dados Mockados
-
-| O que está mockado | Onde | Substitui |
-|---------------------|------|-----------|
-| Avaliação (5 estrelas) | InfluencerProfile, ClientExplore, FeaturedInfluencers | Sistema de reviews real |
-| Estatísticas (campanhas, engajamento, satisfação) | InfluencerProfile | Métricas calculadas dos bookings |
-| Depoimentos (3 fixos) | InfluencerProfile | Reviews reais de clientes |
-| Feed Instagram (6 imagens picsum) | InstagramFeed | Meta Graph API |
-| Números da landing (500 influencers, 2000 campanhas, 98% satisfação) | HeroSection | Contadores reais do banco |
-| Influenciadoras fallback (5 fictícias) | FeaturedInfluencers | Dados reais do banco |
-| ~~Número WhatsApp suporte~~ ✅ | WhatsAppButton | Usa `NEXT_PUBLIC_SUPPORT_WA` |
-| ~~`codigo_confirmacao: "TEMP"`~~ ✅ | AgendarServico → `/api/bookings` | Gera `AI-YYYY-NNNN` server-side |
+| # | Item | Prioridade |
+| --- | --- | --- |
+| P1 | Regenerar tipos Supabase (`npx supabase gen types`) após mudanças no schema | Alta |
+| P2 | Implementar reviews/avaliações de clientes | Média |
+| P3 | Integrar Meta Graph API no `InstagramFeed` | Média |
+| P4 | Implementar bot SDR n8n (ver [SDR.md](SDR.md)) | Baixa |
+| P5 | Migrar `material_url` de TEXT (CSV) para `TEXT[]` no Supabase | Baixa |
+| P6 | Configurar RLS no Supabase para proteção em profundidade | Alta |
+| P7 | Atualizar copyright 2025 → 2026 no `Footer.tsx` | Baixa |
+| P8 | Adicionar paginação em `/api/admin/dashboard` (allBookings limitado a 200) | Média |
 
 ---
 
-## Problemas e Inconsistências
+## Legenda
 
-| # | Status | Problema | Arquivo | Observação |
-|---|--------|---------|---------|------------|
-| 1 | ✅ Corrigido | `codigo_confirmacao` salvo como `"TEMP"` | `/api/bookings` | Gera `AI-YYYY-NNNN` via `generateBookingCode()` |
-| 2 | ✅ Corrigido | `client_profiles` usada com `as any` | `/api/auth/register/client` | Tipagem via `Database` types |
-| 3 | ⚠️ Parcial | `influencer_analysis` sem tipo gerado | AdminPages | Tipo inline nas admin routes; tipos Supabase pendentes de regerar |
-| 4 | ✅ Corrigido | Role `client` não atribuído no cadastro | `/api/auth/register/client` | Insere em `user_roles` server-side |
-| 5 | ✅ Corrigido | `/painel` sem check de role `influencer` | `src/middleware.ts` | Middleware verifica JWT e role antes de servir a rota |
-| 6 | ✅ Corrigido | `material_url` como string CSV | `/api/bookings` POST | Recebe array, junta com `,` para o banco (workaround até migrar coluna para `TEXT[]`) |
-| 7 | ✅ Corrigido | `window.location.origin` no PerfilPage | `PerfilPage.tsx` | Substituído por `process.env.NEXT_PUBLIC_APP_URL` |
-| 8 | ✅ Corrigido | Dois sistemas de toast (sonner + shadcn) | `Providers.tsx` | Removido `<Toaster />` shadcn; apenas Sonner |
-| 9 | ✅ Corrigido | Fontes via `@import` no CSS | `layout.tsx` | Migrado para `next/font/google` com CSS variables |
-| 10 | ✅ Corrigido | `max_por_dia` dupla fonte de verdade | `/api/influencers/[slug]/availability` | Usa apenas `services.max_por_dia` |
-| 11 | ✅ Corrigido | WhatsApp suporte hardcoded | `WhatsAppButton.tsx` | Usa `NEXT_PUBLIC_SUPPORT_WA` do `.env` |
-| 12 | ⚠️ Pendente | Copyright "2025" no Footer | `Footer.tsx` | Atualizar para 2026 |
-| 13 | ✅ Corrigido | Todo acesso direto via anon key | `src/app/api/` | API Routes server-side com service_role + JWT auth |
-| 14 | ✅ Corrigido | Sem middleware de proteção de rotas | `src/middleware.ts` | Middleware verifica JWT e redireciona por role |
-
----
-
-## Legenda de Status
-
-| Status | Significado |
-|--------|-------------|
-| `Lovable` | Criado pelo Lovable, pode usar dados reais ou mockados |
-| `Implementado` | Backend real funcionando end-to-end |
-| `Parcial` | Parcialmente implementado |
+| Símbolo | Significado |
+| --- | --- |
+| `Implementado` | Funcionando end-to-end com dados reais |
+| `Planejado` | Arquitetura definida, não implementado |
+| `Mock` | Usando dados fictícios, integração real pendente |
 | `Pendente` | Ainda não iniciado |

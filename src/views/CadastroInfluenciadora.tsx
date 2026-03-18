@@ -30,7 +30,7 @@ const CadastroInfluenciadora = () => {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.senha,
-        options: { emailRedirectTo: process.env.NEXT_PUBLIC_APP_URL },
+        options: { emailRedirectTo: (process.env.NEXT_PUBLIC_APP_URL || window.location.origin) + '/auth/callback' },
       });
       if (authError) throw authError;
       if (!authData.user) throw new Error("Erro ao criar conta");

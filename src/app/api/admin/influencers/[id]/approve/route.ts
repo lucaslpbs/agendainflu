@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const { data: inf, error } = await db
       .from('influencers')
-      .update({ status: 'ativa', aprovado_em: new Date().toISOString(), observacoes_admin: notas || null })
+      .update({ status: 'ativa', aprovado_em: new Date().toISOString() })
       .eq('id', params.id)
       .select('nome, whatsapp')
       .single()

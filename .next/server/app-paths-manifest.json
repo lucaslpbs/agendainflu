@@ -1,6 +1,13 @@
 {
-  "/api/influencers/route": "app/api/influencers/route.js",
+  "/page": "app/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
   "/api/auth/exchange/route": "app/api/auth/exchange/route.js",
-  "/(public)/[username]/page": "app/(public)/[username]/page.js",
-  "/page": "app/page.js"
+  "/cliente/page": "app/cliente/page.js",
+  "/painel/page": "app/painel/page.js",
+  "/painel/calendario/page": "app/painel/calendario/page.js",
+  "/painel/servicos/page": "app/painel/servicos/page.js",
+  "/painel/agendamentos/page": "app/painel/agendamentos/page.js",
+  "/painel/clientes/page": "app/painel/clientes/page.js",
+  "/painel/lista-espera/page": "app/painel/lista-espera/page.js",
+  "/painel/perfil/page": "app/painel/perfil/page.js"
 }

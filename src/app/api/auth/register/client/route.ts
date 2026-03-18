@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         cnpj: tipo_pessoa === 'pj' ? cnpj : null,
         razao_social: tipo_pessoa === 'pj' ? razao_social : null,
         cpf: tipo_pessoa === 'pf' ? cpf : null,
-        endereco: endereco || null,
+        endereco_comercial: endereco || null,
       })
     if (profileError) throw profileError
 

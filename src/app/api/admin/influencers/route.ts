@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') || 'em_analise'
 
-    let query = db.from('influencers').select('*').order('criado_em', { ascending: true })
+    let query = db.from('influencers').select('*').order('created_at', { ascending: true })
     if (status !== 'todas') query = query.eq('status', status as any)
 
     const { data, error } = await query

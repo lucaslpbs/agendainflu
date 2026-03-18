@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       .from('clients')
       .select('*')
       .eq('influencer_id', auth.influencer_id)
-      .order('criado_em', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status as any)
     if (busca) query = query.or('nome.ilike.%' + busca + '%,empresa.ilike.%' + busca + '%,whatsapp.ilike.%' + busca + '%')

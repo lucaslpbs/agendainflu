@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const { data: inf, error } = await db
       .from('influencers')
-      .update({ status: 'rejeitada', observacoes_admin: motivo })
+      .update({ status: 'rejeitada' })
       .eq('id', params.id)
       .select('nome, whatsapp')
       .single()

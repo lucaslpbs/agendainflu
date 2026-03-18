@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         nicho: nicho || null,
         seguidores: seguidores || null,
         foto_url: foto_url || null,
-        instagram_url: instagram || null,
+        instagram: instagram || null,
         whatsapp,
         status: 'em_analise',
       })

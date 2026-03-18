@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     if (nicho) query = query.ilike('nicho', `%${nicho}%`)
     if (busca) query = query.or(`nome.ilike.%${busca}%,username.ilike.%${busca}%`)
 
-    const { data, error } = await query.order('criado_em', { ascending: false })
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
 
     return NextResponse.json({ data: data || [] })

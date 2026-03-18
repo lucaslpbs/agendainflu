@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/page": [
+    "/(auth)/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/(auth)/login/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -16,10 +16,70 @@
       "static/chunks/main-app.js",
       "static/chunks/app/not-found.js"
     ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/(auth)/cadastro-influenciadora/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(auth)/cadastro-influenciadora/page.js"
+    ],
+    "/cliente/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/cliente/page.js"
+    ],
+    "/cliente/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/cliente/layout.js"
+    ],
     "/(public)/[username]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(public)/[username]/page.js"
+    ],
+    "/painel/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/page.js"
+    ],
+    "/painel/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/layout.js"
+    ],
+    "/painel/calendario/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/calendario/page.js"
+    ],
+    "/painel/agendamentos/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/agendamentos/page.js"
+    ],
+    "/painel/servicos/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/servicos/page.js"
+    ],
+    "/painel/clientes/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/clientes/page.js"
+    ],
+    "/painel/lista-espera/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/lista-espera/page.js"
+    ],
+    "/painel/perfil/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/painel/perfil/page.js"
     ]
   }
 }
