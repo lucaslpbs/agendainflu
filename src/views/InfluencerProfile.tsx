@@ -117,8 +117,8 @@ const InfluencerProfile = () => {
     );
   }
 
-  const instagramHandle = influencer.instagram_url
-    ? influencer.instagram_url.replace(/https?:\/\/(www\.)?instagram\.com\/?/i, "").replace(/\/$/, "").replace(/^@/, "")
+  const instagramHandle = influencer.instagram
+    ? influencer.instagram.replace(/https?:\/\/(www\.)?instagram\.com\/?/i, "").replace(/\/$/, "").replace(/^@/, "")
     : null;
 
   const isLoggedIn = !!user;
@@ -177,7 +177,7 @@ const InfluencerProfile = () => {
                   )}
 
                   {instagramHandle && (
-                    <a href={influencer.instagram_url!.startsWith("http") ? influencer.instagram_url! : `https://instagram.com/${instagramHandle}`}
+                    <a href={influencer.instagram!.startsWith("http") ? influencer.instagram! : `https://instagram.com/${instagramHandle}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-foreground px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors">
                       <Instagram size={14} className="text-primary" />
@@ -244,7 +244,7 @@ const InfluencerProfile = () => {
 
       {/* Instagram Feed */}
       <div className="container max-w-5xl mt-10">
-        <InstagramFeed instagramUrl={influencer.instagram_url} instagramHandle={instagramHandle} />
+        <InstagramFeed instagramUrl={influencer.instagram} instagramHandle={instagramHandle} />
       </div>
 
       {/* Services - show types always, prices only for logged in */}

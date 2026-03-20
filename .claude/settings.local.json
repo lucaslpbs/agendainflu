@@ -33,5 +33,8 @@
       "Bash(cmd /c \"rmdir /s /q .next\")",
       "Bash(npx tsc:*)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "supabase"
+  ]
 }

@@ -296,7 +296,7 @@ export const AdminInfluenciadoras = () => {
   const [observacoes, setObservacoes] = useState("");
 
   const fetchInfluencers = async () => {
-    const { data } = await supabase.from("influencers").select("*").order("criado_em", { ascending: false });
+    const { data } = await supabase.from("influencers").select("*").order("created_at", { ascending: false });
     setInfluencers(data || []);
   };
 
@@ -507,7 +507,7 @@ export const AdminClientes = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from("clients").select("*, influencers(*)").order("criado_em", { ascending: false });
+      const { data } = await supabase.from("clients").select("*, influencers(*)").order("created_at", { ascending: false });
       setClients((data as any) || []);
     };
     fetch();

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -35,8 +35,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-// Helper: trocar Supabase token por JWT proprio com role
-async function exchangeForApiToken(supabaseToken: string): Promise<{ token: string; role: string } | null> {
+async function exchangeForApiToken(supabaseToken: string): Promise<{ token: string; role: string; influencer_id?: string } | null> {
   try {
     const res = await fetch('/api/auth/exchange', {
       method: 'POST',
@@ -44,7 +43,9 @@ async function exchangeForApiToken(supabaseToken: string): Promise<{ token: stri
       body: JSON.stringify({ supabase_token: supabaseToken }),
     });
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    // role e influencer_id estão no top-level da resposta
+    return { token: data.token, role: data.role, influencer_id: data.influencer_id };
   } catch {
     return null;
   }
@@ -58,21 +59,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [influencer, setInfluencer] = useState<Tables<"influencers"> | null>(null);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
-  const fetchInfluencer = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("influencers")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setInfluencer(data);
+  // Evita processar a mesma sessão duas vezes (ex: INITIAL_SESSION + TOKEN_REFRESHED simultâneos)
+  const processedSessionRef = useRef<string | null>(null);
+
+  // Busca via API (service role) para não depender de RLS policies do Supabase
+  const fetchInfluencer = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('agenda-token') : null;
+      const res = await fetch('/api/auth/me', {
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+      });
+      if (!res.ok) return;
+      const { profile } = await res.json();
+      setInfluencer(profile ?? null);
+    } catch {
+      // ignora erros silenciosos
+    }
   }, []);
 
   const refreshInfluencer = useCallback(async () => {
-    if (user) await fetchInfluencer(user.id);
-  }, [user, fetchInfluencer]);
+    await fetchInfluencer();
+  }, [fetchInfluencer]);
 
-  // Ao ter uma sessao Supabase, trocar por token proprio
   const handleSession = useCallback(async (sess: Session | null) => {
+    // Evita processar a mesma sessão duas vezes (getSession + onAuthStateChange)
+    const sessionKey = sess?.access_token ?? 'null';
+    if (processedSessionRef.current === sessionKey) return;
+    processedSessionRef.current = sessionKey;
+
     setSession(sess);
     setUser(sess?.user ?? null);
 
@@ -84,20 +98,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Trocar token Supabase por JWT proprio com role
+    // Trocar token Supabase por JWT próprio com role
     const exchanged = await exchangeForApiToken(sess.access_token);
 
     if (exchanged) {
       const role = exchanged.role as UserRole;
       setRoles([role]);
       setApiToken(exchanged.token);
-      // Guardar em localStorage para uso em fetch headers
       if (typeof window !== 'undefined') {
         localStorage.setItem('agenda-token', exchanged.token);
       }
-      // Buscar dados da influencer se for influencer
       if (role === 'influencer' || role === 'admin') {
-        await fetchInfluencer(sess.user.id);
+        await fetchInfluencer();
       }
     } else {
       // Fallback: buscar roles diretamente do Supabase
@@ -108,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const roleList = (roleData?.map(r => r.role) || []) as UserRole[];
       setRoles(roleList);
       if (roleList.includes("influencer") || roleList.includes("admin")) {
-        await fetchInfluencer(sess.user.id);
+        await fetchInfluencer();
       }
     }
 
@@ -116,12 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchInfluencer]);
 
   useEffect(() => {
-    // Restaurar sessao existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session);
-    });
-
-    // Escutar mudancas de auth
+    // onAuthStateChange dispara imediatamente com INITIAL_SESSION, cobrindo o caso de getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       handleSession(session);
     });
@@ -130,12 +137,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [handleSession]);
 
   const signOut = async () => {
-    // Limpar cookie via API
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    // Limpar localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('agenda-token');
     }
+    processedSessionRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

@@ -10,7 +10,7 @@ interface ProtectedLayoutProps {
 }
 
 export function ProtectedLayout({ children, requiredRole }: ProtectedLayoutProps) {
-  const { user, loading, isAdmin } = useAuth()
+  const { user, loading, roles, isAdmin, isInfluencer } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -21,8 +21,17 @@ export function ProtectedLayout({ children, requiredRole }: ProtectedLayoutProps
     }
     if (requiredRole === 'admin' && !isAdmin) {
       router.push('/')
+      return
     }
-  }, [user, loading, isAdmin, requiredRole, router])
+    if (requiredRole === 'influencer' && !isInfluencer && !isAdmin) {
+      router.push('/cliente')
+      return
+    }
+    if (requiredRole === 'client' && (isInfluencer || isAdmin)) {
+      router.push(isAdmin ? '/admin' : '/painel')
+      return
+    }
+  }, [user, loading, roles, isAdmin, isInfluencer, requiredRole, router])
 
   if (loading) {
     return (
@@ -34,6 +43,8 @@ export function ProtectedLayout({ children, requiredRole }: ProtectedLayoutProps
 
   if (!user) return null
   if (requiredRole === 'admin' && !isAdmin) return null
+  if (requiredRole === 'influencer' && !isInfluencer && !isAdmin) return null
+  if (requiredRole === 'client' && (isInfluencer || isAdmin)) return null
 
   return <>{children}</>
 }

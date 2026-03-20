@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,25 @@ const PerfilPage = () => {
   const { influencer, refreshInfluencer } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    nome: influencer?.nome || "",
-    bio: influencer?.bio || "",
-    nicho: influencer?.nicho || "",
-    instagram_url: influencer?.instagram_url || "",
-    whatsapp: influencer?.whatsapp || "",
-    seguidores: influencer?.seguidores || "",
+    nome: "",
+    bio: "",
+    nicho: "",
+    instagram: "",
+    whatsapp: "",
+    seguidores: "",
   });
+
+  useEffect(() => {
+    if (!influencer) return;
+    setForm({
+      nome: influencer.nome || "",
+      bio: influencer.bio || "",
+      nicho: influencer.nicho || "",
+      instagram: influencer.instagram || "",
+      whatsapp: influencer.whatsapp || "",
+      seguidores: influencer.seguidores || "",
+    });
+  }, [influencer]);
 
   const handleSave = async () => {
     if (!influencer) return;
@@ -62,11 +74,11 @@ const PerfilPage = () => {
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="relative">
-              {influencer?.foto_url ? (
+              {influencer.foto_url ? (
                 <img src={influencer.foto_url} alt="Foto" className="w-20 h-20 rounded-2xl object-cover border-2 border-rosa-light" />
               ) : (
                 <div className="w-20 h-20 rounded-2xl bg-rosa-light flex items-center justify-center text-primary text-2xl font-bold">
-                  {influencer?.nome?.charAt(0)}
+                  {influencer.nome?.charAt(0)}
                 </div>
               )}
               <label className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:opacity-90">
@@ -75,9 +87,9 @@ const PerfilPage = () => {
               </label>
             </div>
             <div>
-              <p className="font-semibold">{influencer?.nome}</p>
-              <p className="text-sm text-muted-foreground">@{influencer?.username}</p>
-              <p className="text-sm mt-1">{statusLabel[influencer?.status || ""]}</p>
+              <p className="font-semibold">{influencer.nome}</p>
+              <p className="text-sm text-muted-foreground">@{influencer.username}</p>
+              <p className="text-sm mt-1">{statusLabel[influencer.status]}</p>
             </div>
           </div>
 
@@ -103,7 +115,7 @@ const PerfilPage = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Instagram</label>
-                <input type="text" value={form.instagram_url} onChange={(e) => setForm({ ...form, instagram_url: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
+                <input type="text" value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">WhatsApp</label>
@@ -119,7 +131,7 @@ const PerfilPage = () => {
         <div className="bg-card rounded-xl border border-border p-6">
           <h3 className="font-semibold mb-2">Link público do perfil</h3>
           <p className="text-sm text-muted-foreground bg-secondary rounded-lg px-4 py-2 font-mono">
-            {process.env.NEXT_PUBLIC_APP_URL}/{influencer?.username}
+            {process.env.NEXT_PUBLIC_APP_URL}/{influencer.username}
           </p>
         </div>
       </div>

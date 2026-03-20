@@ -3,5 +3,5 @@
 import { ProtectedLayout } from '@/components/ProtectedLayout'
 
 export default function PainelLayout({ children }: { children: React.ReactNode }) {
-  return <ProtectedLayout>{children}</ProtectedLayout>
+  return <ProtectedLayout requiredRole="influencer">{children}</ProtectedLayout>
 }
