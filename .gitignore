@@ -12,6 +12,7 @@ node_modules
 .pnp
 .pnp.js
 .yarn/install-state.gz
+*.gz
 
 # Next.js build output
 .next/
