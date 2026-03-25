@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/apiFetch";
+import { useServices, useSaveService, useDeleteService } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,54 +15,38 @@ const serviceLabels: Record<string, string> = {
 
 const ServicosPage = () => {
   const { influencer } = useAuth();
-  const [services, setServices] = useState<Tables<"services">[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Tables<"services"> | null>(null);
   const [form, setForm] = useState({ tipo: "stories" as any, formato: "online" as any, preco: "", descricao: "", max_por_dia: "1" });
 
-  const fetchServices = async () => {
-    if (!influencer) return;
-    try {
-      const { data } = await apiFetch('/api/services?influencer_id=' + influencer.id);
-      setServices(data || []);
-    } catch { setServices([]); }
-  };
-
-  useEffect(() => { fetchServices(); }, [influencer]);
+  const { data: services = [], isLoading } = useServices();
+  const saveService = useSaveService();
+  const deleteService = useDeleteService();
 
   const handleSave = async () => {
     if (!influencer) return;
-    const payload = {
-      influencer_id: influencer.id,
-      tipo: form.tipo,
-      formato: form.formato,
-      preco: parseFloat(form.preco),
-      descricao: form.descricao,
-      max_por_dia: parseInt(form.max_por_dia),
-    };
-
     try {
-      if (editing) {
-        await apiFetch('/api/services/' + editing.id, { method: 'PATCH', body: JSON.stringify(payload) });
-        toast.success("Serviço atualizado!");
-      } else {
-        await apiFetch('/api/services', { method: 'POST', body: JSON.stringify(payload) });
-        toast.success("Serviço criado!");
-      }
+      await saveService.mutateAsync({
+        id: editing?.id,
+        tipo: form.tipo,
+        formato: form.formato,
+        preco: parseFloat(form.preco),
+        descricao: form.descricao,
+        max_por_dia: parseInt(form.max_por_dia),
+      });
+      toast.success(editing ? "Serviço atualizado!" : "Serviço criado!");
+      setShowForm(false);
+      setEditing(null);
+      setForm({ tipo: "stories", formato: "online", preco: "", descricao: "", max_por_dia: "1" });
     } catch (err: any) {
-      return toast.error(err.message);
+      toast.error(err.message);
     }
-    setShowForm(false);
-    setEditing(null);
-    setForm({ tipo: "stories", formato: "online", preco: "", descricao: "", max_por_dia: "1" });
-    fetchServices();
   };
 
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch('/api/services/' + id, { method: 'DELETE' });
+      await deleteService.mutateAsync(id);
       toast.success("Serviço removido!");
-      fetchServices();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -121,34 +105,40 @@ const ServicosPage = () => {
               <textarea rows={2} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm resize-none" />
             </div>
             <div className="flex gap-2">
-              <Button variant="hero" size="sm" onClick={handleSave}>Salvar</Button>
+              <Button variant="hero" size="sm" onClick={handleSave} disabled={saveService.isPending}>Salvar</Button>
               <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setEditing(null); }}>Cancelar</Button>
             </div>
           </div>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          {services.map((s) => (
-            <div key={s.id} className="bg-card rounded-xl border border-border p-6 hover:shadow-rosa transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-semibold">{serviceLabels[s.tipo] || s.tipo}</h3>
-                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{s.formato}</span>
+        {isLoading ? (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[0, 1, 2].map((i) => <div key={i} className="h-40 bg-card rounded-xl border border-border animate-pulse" />)}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {services.map((s) => (
+              <div key={s.id} className="bg-card rounded-xl border border-border p-6 hover:shadow-rosa transition-shadow">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-semibold">{serviceLabels[s.tipo] || s.tipo}</h3>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{s.formato}</span>
+                  </div>
+                  <span className="text-lg font-bold text-primary">R$ {s.preco.toFixed(2)}</span>
                 </div>
-                <span className="text-lg font-bold text-primary">R$ {s.preco.toFixed(2)}</span>
+                <p className="text-sm text-muted-foreground mb-3">{s.descricao}</p>
+                <p className="text-xs text-muted-foreground mb-3">Máx. {s.max_por_dia}/dia • {s.ativo ? "Ativo" : "Inativo"}</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => startEdit(s)}><Pencil size={14} /></Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(s.id)} disabled={deleteService.isPending}><Trash2 size={14} /></Button>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">{s.descricao}</p>
-              <p className="text-xs text-muted-foreground mb-3">Máx. {s.max_por_dia}/dia • {s.ativo ? "Ativo" : "Inativo"}</p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => startEdit(s)}><Pencil size={14} /></Button>
-                <Button variant="outline" size="sm" onClick={() => handleDelete(s.id)}><Trash2 size={14} /></Button>
-              </div>
-            </div>
-          ))}
-          {services.length === 0 && !showForm && (
-            <p className="text-sm text-muted-foreground col-span-2">Nenhum serviço cadastrado. Clique em "Novo serviço" para começar.</p>
-          )}
-        </div>
+            ))}
+            {services.length === 0 && !showForm && (
+              <p className="text-sm text-muted-foreground col-span-2">Nenhum serviço cadastrado. Clique em "Novo serviço" para começar.</p>
+            )}
+          </div>
+        )}
       </div>
     </PanelLayout>
   );

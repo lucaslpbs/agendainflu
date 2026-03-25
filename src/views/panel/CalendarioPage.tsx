@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/apiFetch";
+import { useState } from "react";
+import { useCalendario, useSaveAvailability, useUpdateBookingStatus } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,36 +11,25 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
+import type { BookingWithRelations } from "@/hooks/usePanelData";
 
 const CalendarioPage = () => {
-  const { influencer } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [availability, setAvailability] = useState<Tables<"availability">[]>([]);
-  const [bookings, setBookings] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null })[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingSlots, setEditingSlots] = useState<number>(1);
-  const [detailBooking, setDetailBooking] = useState<(Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null }) | null>(null);
+  const [detailBooking, setDetailBooking] = useState<BookingWithRelations | null>(null);
 
-  const fetchData = async () => {
-    if (!influencer) return;
-    const mes = format(currentMonth, "yyyy-MM");
+  const { data, isLoading } = useCalendario(currentMonth);
+  const availability = data?.availability ?? [];
+  const bookings = data?.bookings ?? [];
+
+  const saveAvailability = useSaveAvailability();
+  const updateBookingStatus = useUpdateBookingStatus();
+
+  const handleUpdateBookingStatus = async (id: string, status: "confirmado" | "cancelado" | "concluido") => {
     try {
-      const [avData, bkData] = await Promise.all([
-        apiFetch('/api/availability?mes=' + mes),
-        apiFetch('/api/bookings?data_inicio=' + format(startOfMonth(currentMonth), "yyyy-MM-dd") + '&data_fim=' + format(endOfMonth(currentMonth), "yyyy-MM-dd")),
-      ]);
-      setAvailability(avData.data || []);
-      setBookings((bkData.data as any) || []);
-    } catch { }
-  };
-
-  useEffect(() => { fetchData(); }, [influencer, currentMonth]);
-
-  const updateBookingStatus = async (id: string, status: "confirmado" | "cancelado" | "concluido") => {
-    try {
-      await apiFetch('/api/bookings/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+      await updateBookingStatus.mutateAsync({ id, status });
       toast.success('Agendamento ' + status + '!');
-      fetchData();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -50,15 +38,11 @@ const CalendarioPage = () => {
   const toggleBlock = async (date: string) => {
     const existing = availability.find((a) => a.data === date);
     try {
-      await apiFetch('/api/availability', {
-        method: 'POST',
-        body: JSON.stringify({
-          data: date,
-          bloqueado: !existing?.bloqueado,
-          slots_disponiveis: existing?.slots_disponiveis || 1,
-        }),
+      await saveAvailability.mutateAsync({
+        data: date,
+        bloqueado: !existing?.bloqueado,
+        slots_disponiveis: existing?.slots_disponiveis || 1,
       });
-      fetchData();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -68,16 +52,12 @@ const CalendarioPage = () => {
     if (!selectedDate) return;
     const existing = availability.find((a) => a.data === selectedDate);
     try {
-      await apiFetch('/api/availability', {
-        method: 'POST',
-        body: JSON.stringify({
-          data: selectedDate,
-          bloqueado: existing?.bloqueado || false,
-          slots_disponiveis: editingSlots,
-        }),
+      await saveAvailability.mutateAsync({
+        data: selectedDate,
+        bloqueado: existing?.bloqueado || false,
+        slots_disponiveis: editingSlots,
       });
       toast.success("Limite atualizado!");
-      fetchData();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -153,40 +133,46 @@ const CalendarioPage = () => {
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
-          {/* Calendar Grid */}
           <div className="lg:col-span-3 bg-card rounded-2xl border border-border p-5">
             <div className="grid grid-cols-7 gap-1 mb-2">
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
                 <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} />)}
-              {days.map((day) => {
-                const dateStr = format(day, "yyyy-MM-dd");
-                const status = getDayStatus(dateStr);
-                const count = getDayBookingCount(dateStr);
-                const isSelected = selectedDate === dateStr;
-                const isPast = isBefore(day, startOfDay(new Date()));
-                return (
-                  <button
-                    key={dateStr}
-                    onClick={() => selectDay(dateStr)}
-                    className={`relative aspect-square rounded-xl border text-sm font-medium transition-all ${statusColors[status]} ${isSelected ? "ring-2 ring-primary scale-105" : ""} ${isToday(day) ? "ring-2 ring-accent" : ""} ${isPast ? "opacity-50" : ""}`}
-                  >
-                    {format(day, "d")}
-                    {count > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <div key={i} className="aspect-square rounded-xl bg-secondary animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} />)}
+                {days.map((day) => {
+                  const dateStr = format(day, "yyyy-MM-dd");
+                  const status = getDayStatus(dateStr);
+                  const count = getDayBookingCount(dateStr);
+                  const isSelected = selectedDate === dateStr;
+                  const isPast = isBefore(day, startOfDay(new Date()));
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => selectDay(dateStr)}
+                      className={`relative aspect-square rounded-xl border text-sm font-medium transition-all ${statusColors[status]} ${isSelected ? "ring-2 ring-primary scale-105" : ""} ${isToday(day) ? "ring-2 ring-accent" : ""} ${isPast ? "opacity-50" : ""}`}
+                    >
+                      {format(day, "d")}
+                      {count > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Day Detail Panel */}
           <div className="lg:col-span-2 space-y-4">
             {selectedDate ? (
               <>
@@ -199,38 +185,27 @@ const CalendarioPage = () => {
                       <X size={14} />
                     </Button>
                   </div>
-
-                  {/* Slots config */}
                   <div className="space-y-3 mb-4">
                     <label className="text-xs font-medium text-muted-foreground">Limite de agendamentos</label>
                     <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={editingSlots}
-                        onChange={(e) => setEditingSlots(Number(e.target.value))}
-                        className="w-20"
-                      />
-                      <Button size="sm" onClick={saveSlots}>Salvar</Button>
+                      <Input type="number" min={1} max={50} value={editingSlots} onChange={(e) => setEditingSlots(Number(e.target.value))} className="w-20" />
+                      <Button size="sm" onClick={saveSlots} disabled={saveAvailability.isPending}>Salvar</Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {getDayBookingCount(selectedDate)} / {selectedAv?.slots_disponiveis || editingSlots} agendamentos
                     </p>
                   </div>
-
-                  {/* Block/Unblock */}
                   <Button
                     variant={selectedAv?.bloqueado ? "default" : "outline"}
                     size="sm"
                     className="w-full gap-2"
                     onClick={() => toggleBlock(selectedDate)}
+                    disabled={saveAvailability.isPending}
                   >
                     {selectedAv?.bloqueado ? <><Unlock size={14} /> Desbloquear dia</> : <><Lock size={14} /> Bloquear dia</>}
                   </Button>
                 </div>
 
-                {/* Day bookings */}
                 <div className="bg-card rounded-2xl border border-border p-5">
                   <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                     <CalendarCheck size={16} className="text-primary" />
@@ -271,7 +246,7 @@ const CalendarioPage = () => {
         booking={detailBooking}
         open={!!detailBooking}
         onOpenChange={(open) => !open && setDetailBooking(null)}
-        onUpdateStatus={updateBookingStatus}
+        onUpdateStatus={handleUpdateBookingStatus}
       />
     </PanelLayout>
   );

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/apiFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -85,30 +85,10 @@ export const AdminDashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const [infRes, bkRes, clRes, wlRes] = await Promise.all([
-        supabase.from("influencers").select("id, status"),
-        supabase.from("bookings").select("*, services(preco, tipo), clients(nome), influencers(nome)"),
-        supabase.from("clients").select("id", { count: "exact" }),
-        supabase.from("waitlist").select("id", { count: "exact" }),
-      ]);
-
-      const allBookings = bkRes.data || [];
-      const receita = allBookings
-        .filter((b: any) => b.status === "confirmado" || b.status === "concluido")
-        .reduce((sum: number, b: any) => sum + (b.services?.preco || 0), 0);
-
-      setStats({
-        influencers: infRes.data?.filter((i) => i.status === "ativa").length || 0,
-        emAnalise: infRes.data?.filter((i) => i.status === "em_analise").length || 0,
-        bookings: allBookings.length,
-        clients: clRes.count || 0,
-        waitlist: wlRes.count || 0,
-        receita,
-      });
-      setBookings(allBookings);
-    };
-    fetchAll();
+    apiFetch('/api/admin/dashboard').then((res) => {
+      setStats(res.stats);
+      setBookings(res.allBookings || []);
+    }).catch(() => {});
   }, []);
 
   const monthStart = startOfMonth(currentMonth);
@@ -285,7 +265,6 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 // ==================== ADMIN INFLUENCIADORAS ====================
 export const AdminInfluenciadoras = () => {
-  const { user } = useAuth();
   const [influencers, setInfluencers] = useState<Tables<"influencers">[]>([]);
   const [tab, setTab] = useState<"all" | "em_analise">("em_analise");
   const [search, setSearch] = useState("");
@@ -296,30 +275,33 @@ export const AdminInfluenciadoras = () => {
   const [observacoes, setObservacoes] = useState("");
 
   const fetchInfluencers = async () => {
-    const { data } = await supabase.from("influencers").select("*").order("created_at", { ascending: false });
-    setInfluencers(data || []);
+    const res = await apiFetch('/api/admin/influencers?status=todas');
+    setInfluencers(res.data || []);
   };
 
   useEffect(() => { fetchInfluencers(); }, []);
 
   const approve = async (id: string) => {
-    await supabase.from("influencers").update({ status: "ativa", aprovado_em: new Date().toISOString(), observacoes_admin: observacoes }).eq("id", id);
-    await supabase.from("influencer_analysis").insert({
-      influencer_id: id, checklist: checklist as any, aprovado_por: user?.id, resultado: "aprovado", notas: observacoes,
-    });
-    toast.success("Influenciadora aprovada!");
-    setSelectedId(null);
-    fetchInfluencers();
+    try {
+      await apiFetch(`/api/admin/influencers/${id}/approve`, { method: 'POST', body: JSON.stringify({ checklist, notas: observacoes }) });
+      toast.success("Influenciadora aprovada!");
+      setSelectedId(null);
+      fetchInfluencers();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const reject = async (id: string) => {
-    await supabase.from("influencers").update({ status: "rejeitada", observacoes_admin: observacoes }).eq("id", id);
-    await supabase.from("influencer_analysis").insert({
-      influencer_id: id, checklist: checklist as any, aprovado_por: user?.id, resultado: "rejeitado", notas: observacoes,
-    });
-    toast.success("Influenciadora rejeitada.");
-    setSelectedId(null);
-    fetchInfluencers();
+    if (!observacoes.trim()) { toast.error("Informe o motivo da rejeição."); return; }
+    try {
+      await apiFetch(`/api/admin/influencers/${id}/reject`, { method: 'POST', body: JSON.stringify({ motivo: observacoes }) });
+      toast.success("Influenciadora rejeitada.");
+      setSelectedId(null);
+      fetchInfluencers();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const filtered = (tab === "em_analise" ? influencers.filter((i) => i.status === "em_analise") : influencers)
@@ -411,14 +393,7 @@ export const AdminAgendamentos = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("bookings")
-        .select("*, services(preco, tipo), clients(nome, whatsapp, empresa), influencers(nome, username)")
-        .order("data_agendada", { ascending: false });
-      setBookings(data || []);
-    };
-    fetch();
+    apiFetch('/api/admin/bookings').then((res) => setBookings(res.data || [])).catch(() => {});
   }, []);
 
   const filtered = bookings
@@ -426,9 +401,13 @@ export const AdminAgendamentos = () => {
     .filter((b) => !search || b.clients?.nome?.toLowerCase().includes(search.toLowerCase()) || b.influencers?.nome?.toLowerCase().includes(search.toLowerCase()) || b.codigo_confirmacao?.toLowerCase().includes(search.toLowerCase()));
 
   const updateStatus = async (id: string, status: string) => {
-    await supabase.from("bookings").update({ status } as any).eq("id", id);
-    setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
-    toast.success("Status atualizado!");
+    try {
+      await apiFetch('/api/admin/bookings', { method: 'PATCH', body: JSON.stringify({ id, status }) });
+      setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
+      toast.success("Status atualizado!");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   return (
@@ -506,11 +485,7 @@ export const AdminClientes = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from("clients").select("*, influencers(*)").order("created_at", { ascending: false });
-      setClients((data as any) || []);
-    };
-    fetch();
+    apiFetch('/api/admin/clients').then((res) => setClients(res.data || [])).catch(() => {});
   }, []);
 
   const filtered = clients.filter((c) => !search || c.nome.toLowerCase().includes(search.toLowerCase()) || c.empresa?.toLowerCase().includes(search.toLowerCase()));
@@ -565,16 +540,19 @@ export const AdminWaitlist = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
 
   const fetchWaitlist = async () => {
-    const { data } = await supabase.from("waitlist").select("*, influencers(nome, username)").order("criado_em", { ascending: false });
-    setWaitlist((data as any) || []);
+    apiFetch('/api/admin/waitlist').then((res) => setWaitlist(res.data || [])).catch(() => {});
   };
 
   useEffect(() => { fetchWaitlist(); }, []);
 
   const updateStatus = async (id: string, status: string) => {
-    await supabase.from("waitlist").update({ status } as any).eq("id", id);
-    setWaitlist((prev) => prev.map((w) => w.id === id ? { ...w, status: status as any } : w));
-    toast.success("Status atualizado!");
+    try {
+      await apiFetch('/api/admin/waitlist', { method: 'PATCH', body: JSON.stringify({ id, status }) });
+      setWaitlist((prev) => prev.map((w) => w.id === id ? { ...w, status: status as any } : w));
+      toast.success("Status atualizado!");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const filtered = waitlist.filter((w) => statusFilter === "todos" || w.status === statusFilter);

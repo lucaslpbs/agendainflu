@@ -1,75 +1,58 @@
 'use client'
 
-import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBookings, useClients, useWaitlist } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { CalendarCheck, Users, Clock, ClipboardList, TrendingUp, DollarSign, BarChart3, ArrowUpRight, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval, parseISO, isToday, isSameMonth, addMonths } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval, isToday, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
-
-type BookingWithRelations = Tables<"bookings"> & { clients: Tables<"clients"> | null; services: Tables<"services"> | null };
 
 const Dashboard = () => {
   const { influencer } = useAuth();
-  const [stats, setStats] = useState({ bookings: 0, pending: 0, clients: 0, waitlist: 0 });
-  const [revenue, setRevenue] = useState(0);
-  const [monthlyData, setMonthlyData] = useState<{ month: string; agendamentos: number; receita: number }[]>([]);
-  const [statusData, setStatusData] = useState<{ name: string; value: number; color: string }[]>([]);
-  const [allBookings, setAllBookings] = useState<BookingWithRelations[]>([]);
   const [dailyViewMonth, setDailyViewMonth] = useState(new Date());
 
-  useEffect(() => {
-    if (!influencer) return;
-    const fetchAll = async () => {
-      const [bookingsRes, clientsRes, waitlistRes] = await Promise.all([
-        supabase.from("bookings").select("*, clients(*), services(*)").eq("influencer_id", influencer.id).order("data_agendada", { ascending: false }),
-        supabase.from("clients").select("id", { count: "exact" }).eq("influencer_id", influencer.id).eq("status", "ativo"),
-        supabase.from("waitlist").select("id", { count: "exact" }).eq("influencer_id", influencer.id).eq("status", "aguardando"),
-      ]);
+  const { data: allBookings = [] } = useBookings();
+  const { data: clients = [] } = useClients();
+  const { data: waitlistItems = [] } = useWaitlist();
 
-      const bookings = (bookingsRes.data as BookingWithRelations[]) || [];
-      setAllBookings(bookings);
+  const stats = useMemo(() => ({
+    bookings: allBookings.length,
+    pending: allBookings.filter(b => b.status === "pendente").length,
+    clients: clients.filter(c => c.status === "ativo").length,
+    waitlist: waitlistItems.filter(w => w.status === "aguardando").length,
+  }), [allBookings, clients, waitlistItems]);
 
-      const pending = bookings.filter(b => b.status === "pendente").length;
-      const confirmed = bookings.filter(b => b.status === "confirmado").length;
-      const completed = bookings.filter(b => b.status === "concluido").length;
-      const cancelled = bookings.filter(b => b.status === "cancelado").length;
+  const revenue = useMemo(() =>
+    allBookings
+      .filter(b => b.status === "concluido" || b.status === "confirmado")
+      .reduce((sum, b) => sum + (b.services?.preco || 0), 0),
+    [allBookings]
+  );
 
-      setStats({ bookings: bookings.length, pending, clients: clientsRes.count || 0, waitlist: waitlistRes.count || 0 });
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    const months = eachMonthOfInterval({ start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) });
+    return months.map(m => {
+      const key = format(m, "yyyy-MM");
+      const mb = allBookings.filter(b => b.data_agendada?.startsWith(key));
+      return {
+        month: format(m, "MMM", { locale: ptBR }),
+        agendamentos: mb.length,
+        receita: mb.filter(b => b.status === "concluido" || b.status === "confirmado").reduce((s, b) => s + (b.services?.preco || 0), 0),
+      };
+    });
+  }, [allBookings]);
 
-      const totalRevenue = bookings
-        .filter(b => b.status === "concluido" || b.status === "confirmado")
-        .reduce((sum, b) => sum + (b.services?.preco || 0), 0);
-      setRevenue(totalRevenue);
+  const statusData = useMemo(() => [
+    { name: "Pendentes", value: allBookings.filter(b => b.status === "pendente").length, color: "hsl(43, 89%, 38%)" },
+    { name: "Confirmados", value: allBookings.filter(b => b.status === "confirmado").length, color: "hsl(340, 82%, 43%)" },
+    { name: "Concluídos", value: allBookings.filter(b => b.status === "concluido").length, color: "hsl(150, 60%, 40%)" },
+    { name: "Cancelados", value: allBookings.filter(b => b.status === "cancelado").length, color: "hsl(0, 84%, 60%)" },
+  ].filter(d => d.value > 0), [allBookings]);
 
-      setStatusData([
-        { name: "Pendentes", value: pending, color: "hsl(43, 89%, 38%)" },
-        { name: "Confirmados", value: confirmed, color: "hsl(340, 82%, 43%)" },
-        { name: "Concluídos", value: completed, color: "hsl(150, 60%, 40%)" },
-        { name: "Cancelados", value: cancelled, color: "hsl(0, 84%, 60%)" },
-      ].filter(d => d.value > 0));
-
-      const now = new Date();
-      const sixMonthsAgo = subMonths(now, 5);
-      const months = eachMonthOfInterval({ start: startOfMonth(sixMonthsAgo), end: endOfMonth(now) });
-      setMonthlyData(months.map(m => {
-        const key = format(m, "yyyy-MM");
-        const mb = bookings.filter(b => b.data_agendada?.startsWith(key));
-        return {
-          month: format(m, "MMM", { locale: ptBR }),
-          agendamentos: mb.length,
-          receita: mb.filter(b => b.status === "concluido" || b.status === "confirmado").reduce((s, b) => s + (b.services?.preco || 0), 0),
-        };
-      }));
-    };
-    fetchAll();
-  }, [influencer]);
-
-  // Daily breakdown for selected month
   const dailyData = useMemo(() => {
     const days = eachDayOfInterval({ start: startOfMonth(dailyViewMonth), end: endOfMonth(dailyViewMonth) });
     return days.map(d => {
@@ -78,18 +61,13 @@ const Dashboard = () => {
       const dayRevenue = dayBookings
         .filter(b => b.status === "concluido" || b.status === "confirmado")
         .reduce((s, b) => s + (b.services?.preco || 0), 0);
-      return {
-        dia: format(d, "dd"),
-        date: d,
-        agendamentos: dayBookings.length,
-        receita: dayRevenue,
-        bookings: dayBookings,
-      };
+      return { dia: format(d, "dd"), date: d, agendamentos: dayBookings.length, receita: dayRevenue, bookings: dayBookings };
     });
   }, [allBookings, dailyViewMonth]);
 
   const dailyMonthRevenue = useMemo(() => dailyData.reduce((s, d) => s + d.receita, 0), [dailyData]);
   const dailyMonthBookings = useMemo(() => dailyData.reduce((s, d) => s + d.agendamentos, 0), [dailyData]);
+  const recentBookings = allBookings.slice(0, 5);
 
   const cards = [
     { label: "Total Agendamentos", value: stats.bookings, icon: CalendarCheck, gradient: "gradient-rosa", iconColor: "text-primary-foreground" },
@@ -108,8 +86,6 @@ const Dashboard = () => {
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{status}</span>;
   };
 
-  const recentBookings = allBookings.slice(0, 5);
-
   return (
     <PanelLayout>
       <div className="space-y-8">
@@ -125,7 +101,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((c) => (
             <div key={c.label} className="relative overflow-hidden rounded-2xl p-6 shadow-rosa transition-all hover:scale-[1.02]">
@@ -144,7 +119,6 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Charts Row */}
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center gap-2 mb-6">
@@ -155,10 +129,7 @@ const Dashboard = () => {
               <BarChart data={monthlyData}>
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid hsl(30 30% 88%)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                  formatter={(value: number) => [value, "Agendamentos"]}
-                />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(30 30% 88%)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }} formatter={(value: number) => [value, "Agendamentos"]} />
                 <Bar dataKey="agendamentos" fill="hsl(340, 82%, 43%)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -194,7 +165,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Daily Breakdown */}
         <div className="bg-card rounded-2xl border border-border p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -214,7 +184,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Month summary */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-primary/5 rounded-xl p-4">
               <p className="text-xs text-muted-foreground mb-1">Agendamentos do mês</p>
@@ -226,7 +195,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Daily chart */}
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={dailyData}>
               <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={1} />
@@ -246,16 +214,13 @@ const Dashboard = () => {
 
           <div className="flex gap-4 justify-center mt-3">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(340, 82%, 43%)" }} />
-              Agendamentos
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(340, 82%, 43%)" }} /> Agendamentos
             </span>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(43, 89%, 38%)" }} />
-              Receita (R$)
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(43, 89%, 38%)" }} /> Receita (R$)
             </span>
           </div>
 
-          {/* Daily detail list - days with bookings */}
           <div className="mt-6 space-y-2 max-h-[400px] overflow-y-auto">
             {dailyData.filter(d => d.agendamentos > 0).map((d) => (
               <div key={d.dia} className="border border-border rounded-xl p-4 hover:bg-muted/30 transition-colors">
@@ -266,9 +231,7 @@ const Dashboard = () => {
                     </span>
                     <span className="text-xs text-muted-foreground">{d.agendamentos} agendamento{d.agendamentos > 1 ? "s" : ""}</span>
                   </div>
-                  <span className="text-sm font-semibold text-accent">
-                    R$ {d.receita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
+                  <span className="text-sm font-semibold text-accent">R$ {d.receita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="space-y-1">
                   {d.bookings.map(b => (
@@ -292,7 +255,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Bookings */}
         <div className="bg-card rounded-2xl border border-border p-6">
           <h3 className="font-display font-semibold mb-4">Últimos Agendamentos</h3>
           {recentBookings.length > 0 ? (

@@ -1,57 +1,42 @@
 'use client'
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/apiFetch";
+import { useState } from "react";
+import { useClients, useAddClient, useUpdateClientStatus } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus, MessageCircle, Ban, CheckCircle } from "lucide-react";
-import type { Tables } from "@/integrations/supabase/types";
 
 const ClientesPage = () => {
-  const { influencer } = useAuth();
-  const [clients, setClients] = useState<Tables<"clients">[]>([]);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nome: "", whatsapp: "", email: "", empresa: "", notas: "" });
 
-  const fetchClients = async () => {
-    if (!influencer) return;
-    try {
-      const { data } = await apiFetch('/api/clients');
-      setClients(data || []);
-    } catch { setClients([]); }
-  };
-
-  useEffect(() => { fetchClients(); }, [influencer]);
+  const { data: clients = [], isLoading } = useClients();
+  const addClient = useAddClient();
+  const updateStatus = useUpdateClientStatus();
 
   const handleAdd = async () => {
     try {
-      await apiFetch('/api/clients', {
-        method: 'POST',
-        body: JSON.stringify({
-          nome: form.nome,
-          whatsapp: form.whatsapp,
-          email: form.email || null,
-          empresa: form.empresa || null,
-          notas: form.notas || null,
-        }),
+      await addClient.mutateAsync({
+        nome: form.nome,
+        whatsapp: form.whatsapp,
+        email: form.email || null,
+        empresa: form.empresa || null,
+        notas: form.notas || null,
       });
       toast.success("Cliente adicionado!");
       setShowForm(false);
       setForm({ nome: "", whatsapp: "", email: "", empresa: "", notas: "" });
-      fetchClients();
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const updateStatus = async (id: string, status: "ativo" | "bloqueado") => {
+  const handleUpdateStatus = async (id: string, status: "ativo" | "bloqueado") => {
     try {
-      await apiFetch('/api/clients/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+      await updateStatus.mutateAsync({ id, status });
       toast.success('Cliente ' + (status === "ativo" ? "ativado" : "bloqueado") + '!');
-      fetchClients();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -101,7 +86,7 @@ const ClientesPage = () => {
             </div>
             <textarea rows={2} placeholder="Notas" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm resize-none" />
             <div className="flex gap-2">
-              <Button variant="hero" size="sm" onClick={handleAdd}>Salvar</Button>
+              <Button variant="hero" size="sm" onClick={handleAdd} disabled={addClient.isPending}>Salvar</Button>
               <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
             </div>
           </div>
@@ -120,33 +105,42 @@ const ClientesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
-                    <td className="px-4 py-3">{c.nome}</td>
-                    <td className="px-4 py-3">{c.whatsapp}</td>
-                    <td className="px-4 py-3">{c.empresa || "—"}</td>
-                    <td className="px-4 py-3">{statusBadge(c.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MessageCircle size={14} /></Button>
-                        </a>
-                        {c.status !== "ativo" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateStatus(c.id, "ativo")}>
-                            <CheckCircle size={14} />
-                          </Button>
-                        )}
-                        {c.status !== "bloqueado" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateStatus(c.id, "bloqueado")}>
-                            <Ban size={14} />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border">
+                      {Array.from({ length: 5 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3"><div className="h-4 bg-secondary rounded animate-pulse" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
                   <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhum cliente encontrado.</td></tr>
+                ) : (
+                  filtered.map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
+                      <td className="px-4 py-3">{c.nome}</td>
+                      <td className="px-4 py-3">{c.whatsapp}</td>
+                      <td className="px-4 py-3">{c.empresa || "—"}</td>
+                      <td className="px-4 py-3">{statusBadge(c.status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MessageCircle size={14} /></Button>
+                          </a>
+                          {c.status !== "ativo" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(c.id, "ativo")}>
+                              <CheckCircle size={14} />
+                            </Button>
+                          )}
+                          {c.status !== "bloqueado" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(c.id, "bloqueado")}>
+                              <Ban size={14} />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

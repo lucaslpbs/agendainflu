@@ -1,8 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/apiFetch";
+import { useWaitlist, useUpdateWaitlistStatus } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -10,27 +8,13 @@ import { MessageCircle, CheckCircle, XCircle, Phone } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 const WaitlistPage = () => {
-  const { influencer } = useAuth();
-  const [items, setItems] = useState<Tables<"waitlist">[]>([]);
-
-  const fetchItems = async () => {
-    if (!influencer) return;
-    try {
-      const { data } = await apiFetch('/api/waitlist');
-      setItems(data || []);
-    } catch { setItems([]); }
-  };
-
-  useEffect(() => { fetchItems(); }, [influencer]);
+  const { data: items = [], isLoading } = useWaitlist();
+  const updateStatus = useUpdateWaitlistStatus();
 
   const approve = async (item: Tables<"waitlist">) => {
     try {
-      await apiFetch('/api/waitlist/' + item.id + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'aprovado' }),
-      });
+      await updateStatus.mutateAsync({ id: item.id, status: 'aprovado' });
       toast.success(item.nome + ' aprovado(a) e adicionado(a) a base de clientes!');
-      fetchItems();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -38,12 +22,8 @@ const WaitlistPage = () => {
 
   const reject = async (id: string) => {
     try {
-      await apiFetch('/api/waitlist/' + id + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'rejeitado', motivo: 'Rejeitado pelo painel' }),
-      });
+      await updateStatus.mutateAsync({ id, status: 'rejeitado', motivo: 'Rejeitado pelo painel' });
       toast.success("Registro rejeitado.");
-      fetchItems();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -51,12 +31,8 @@ const WaitlistPage = () => {
 
   const markContacted = async (id: string) => {
     try {
-      await apiFetch('/api/waitlist/' + id + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'contatado' }),
-      });
+      await updateStatus.mutateAsync({ id, status: 'contatado' });
       toast.success("Marcado como contatado.");
-      fetchItems();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -98,40 +74,49 @@ const WaitlistPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
-                    <td className="px-4 py-3">
-                      <div>{item.nome}</div>
-                      {item.mensagem && <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{item.mensagem}</div>}
-                    </td>
-                    <td className="px-4 py-3">{item.empresa || "—"}</td>
-                    <td className="px-4 py-3">{item.whatsapp}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{new Date(item.criado_em).toLocaleDateString("pt-BR")}</td>
-                    <td className="px-4 py-3">{statusBadge(item.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        {item.status === "aguardando" && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => approve(item)} title="Aprovar">
-                              <CheckCircle size={14} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => reject(item.id)} title="Rejeitar">
-                              <XCircle size={14} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markContacted(item.id)} title="Marcar contatado">
-                              <Phone size={14} />
-                            </Button>
-                          </>
-                        )}
-                        <a href={`https://wa.me/${item.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${item.nome}! Entramos em contato sobre sua solicitação no AgendaInflu. 💖`)}`} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MessageCircle size={14} /></Button>
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {items.length === 0 && (
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border">
+                      {Array.from({ length: 6 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3"><div className="h-4 bg-secondary rounded animate-pulse" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : items.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum registro na lista de espera.</td></tr>
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
+                      <td className="px-4 py-3">
+                        <div>{item.nome}</div>
+                        {item.mensagem && <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{item.mensagem}</div>}
+                      </td>
+                      <td className="px-4 py-3">{item.empresa || "—"}</td>
+                      <td className="px-4 py-3">{item.whatsapp}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{new Date(item.criado_em).toLocaleDateString("pt-BR")}</td>
+                      <td className="px-4 py-3">{statusBadge(item.status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          {item.status === "aguardando" && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => approve(item)} title="Aprovar">
+                                <CheckCircle size={14} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => reject(item.id)} title="Rejeitar">
+                                <XCircle size={14} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => markContacted(item.id)} title="Marcar contatado">
+                                <Phone size={14} />
+                              </Button>
+                            </>
+                          )}
+                          <a href={`https://wa.me/${item.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${item.nome}! Entramos em contato sobre sua solicitação no AgendaInflu. 💖`)}`} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MessageCircle size={14} /></Button>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
