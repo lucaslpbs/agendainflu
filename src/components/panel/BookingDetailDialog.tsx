@@ -141,7 +141,7 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
                 <div className="space-y-1.5">
                   <span className="text-muted-foreground text-xs">Material enviado</span>
                   <div className="flex flex-wrap gap-2">
-                    {b.material_url.split(",").map((url, i) => (
+                    {(Array.isArray(b.material_url) ? b.material_url : b.material_url.split(",")).map((url, i) => (
                       <a key={i} href={url.trim()} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
                       >

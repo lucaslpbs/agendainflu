@@ -1,6 +1,6 @@
 # Banco de Dados — AgendaInflu
 
-> **Última atualização:** 2026-03-18
+> **Última atualização:** 2026-03-25
 > **Provedor:** Supabase (PostgreSQL)
 > **Tipos gerados em:** `src/integrations/supabase/types.ts`
 
@@ -274,6 +274,19 @@ Criada para uso em políticas RLS (não utilizada atualmente — RLS bypass via 
 
 ## Regras de Row Level Security (RLS)
 
-> **Atenção:** As API Routes usam `service_role` (bypassa RLS). O Supabase client com `anon key` no frontend (`src/integrations/supabase/client.ts`) está sujeito às políticas RLS — atualmente usadas apenas no `AuthContext` para leitura de `user_roles` e `influencers` em caso de fallback.
+> **Atenção:** As API Routes usam `service_role` (bypassa RLS). O Supabase client com `anon key` no frontend (`src/integrations/supabase/client.ts`) está sujeito às políticas RLS abaixo.
 
-RLS deve ser configurado para proteger operações diretas pelo cliente anon em produção.
+### Políticas ativas
+
+| Tabela | Policy | Comando | Quem | Condição |
+| ------ | ------ | ------- | ---- | -------- |
+| `client_profiles` | `client_profiles_own` | ALL | authenticated | `user_id = auth.uid()` |
+| `clients` | `clients_select_own` | SELECT | authenticated | `user_id = auth.uid()` |
+| `bookings` | `bookings_select_own_client` | SELECT | authenticated | `client_id IN (SELECT id FROM clients WHERE user_id = auth.uid())` |
+| `bookings` | `bookings_select_influencer` | SELECT | authenticated | `influencer_id IN (SELECT id FROM influencers WHERE user_id = auth.uid())` |
+
+> **Nota:** Operações de INSERT/UPDATE/DELETE em `bookings` e `clients` são feitas exclusivamente via API Routes (service_role), portanto não requerem policies de escrita no cliente.
+
+### Histórico de correções
+
+- **2026-03-25** — Removida policy `bookings_deny_all` (bloqueava 100% das leituras no cliente anon). Adicionadas policies `clients_select_own`, `bookings_select_own_client` e `bookings_select_influencer` para permitir que clientes e influenciadoras leiam seus próprios dados via Supabase client (usado em `views/client/ClientPages.tsx`).

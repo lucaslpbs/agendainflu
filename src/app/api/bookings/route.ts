@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
         codigo_confirmacao,
         descricao_produto,
         link_negocio: link_negocio || null,
-        material_url: materialUrls.length > 0 ? materialUrls.join(',') : null,
+        material_url: materialUrls.length > 0 ? materialUrls : null,
         observacoes: observacoes || null,
         status: clientRow?.status === 'ativo' ? 'confirmado' : 'pendente',
       })

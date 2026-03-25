@@ -31,7 +31,10 @@
       "Bash(rm -rf \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[username]\")",
       "Bash(rm -rf \"c:/Users/lucas/source/repos/agendainflu/src/app/api/influencers/[id]\")",
       "Bash(cmd /c \"rmdir /s /q .next\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(xargs grep:*)",
+      "Bash(npx skills:*)",
+      "Bash(claude mcp:*)"
     ]
   },
   "disabledMcpjsonServers": [
