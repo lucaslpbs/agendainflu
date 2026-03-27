@@ -7,13 +7,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Upload } from "lucide-react";
+import { Upload, CheckCircle2 } from "lucide-react";
 
 const nichos = ["Moda", "Beleza", "Fitness", "Gastronomia", "Viagem", "Tecnologia", "Lifestyle", "Maternidade", "Pets", "Educação"];
 
 const CadastroInfluenciadora = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'form' | 'instagram'>('form');
+  const [influencerId, setInfluencerId] = useState<string | null>(null);
   const [form, setForm] = useState({
     nome: "", email: "", senha: "", whatsapp: "", instagram: "", seguidores: "", nicho: "", bio: "",
   });
@@ -47,7 +49,7 @@ const CadastroInfluenciadora = () => {
         }
       }
 
-      // 3. Criar perfil via API Route (cria influencer + role)
+      // 3. Create influencer profile via API
       const res = await fetch('/api/auth/register/influencer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,14 +70,69 @@ const CadastroInfluenciadora = () => {
         throw new Error(err.error || 'Erro ao criar perfil');
       }
 
+      const { influencer_id } = await res.json();
+
       toast.success("Cadastro enviado para análise! Verifique seu e-mail para confirmar a conta.");
-      router.push("/login");
+      setInfluencerId(influencer_id);
+      setStep('instagram');
     } catch (err: any) {
       toast.error(err.message || "Erro ao cadastrar");
     } finally {
       setLoading(false);
     }
   };
+
+  if (step === 'instagram') {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 pt-24 pb-16 flex items-center justify-center">
+          <div className="container max-w-md">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 size={32} className="text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold mb-2">Cadastro realizado!</h1>
+              <p className="text-muted-foreground text-sm">
+                Confirme seu e-mail e aguarde a aprovação da nossa equipe.
+              </p>
+            </div>
+
+            <div className="bg-card rounded-2xl border border-border p-8 shadow-sm text-center space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">Conecte seu Instagram</h2>
+                <p className="text-sm text-muted-foreground">
+                  Isso permite exibir seu feed automaticamente para os clientes e manter seus seguidores atualizados.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {influencerId ? (
+                  <a href={`/api/auth/instagram/connect?influencer_id=${influencerId}`}>
+                    <Button variant="hero" className="w-full">
+                      Conectar com Instagram
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="hero" className="w-full" disabled>
+                    Conectar com Instagram
+                  </Button>
+                )}
+                <Button variant="outline" className="w-full" onClick={() => router.push("/login")}>
+                  Pular por agora
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Você também pode conectar depois no seu painel de perfil.
+              </p>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

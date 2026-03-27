@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
     }
 
     const body = await req.json()
-    const allowed = ['bio', 'nicho', 'seguidores', 'foto_url', 'instagram', 'whatsapp', 'nome']
+    const allowed = ['bio', 'nicho', 'seguidores', 'foto_url', 'instagram', 'whatsapp', 'nome', 'instagram_connected']
     const update: Record<string, unknown> = {}
     for (const key of allowed) {
       if (key in body) update[key] = body[key]

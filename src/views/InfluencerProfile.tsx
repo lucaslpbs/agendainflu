@@ -244,7 +244,11 @@ const InfluencerProfile = () => {
 
       {/* Instagram Feed */}
       <div className="container max-w-5xl mt-10">
-        <InstagramFeed instagramUrl={influencer.instagram} instagramHandle={instagramHandle} />
+        <InstagramFeed
+          influencerId={influencer.id}
+          instagramUrl={influencer.instagram}
+          instagramHandle={instagramHandle}
+        />
       </div>
 
       {/* Services - show types always, prices only for logged in */}

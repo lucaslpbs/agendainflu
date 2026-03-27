@@ -1,6 +1,6 @@
 # Banco de Dados — AgendaInflu
 
-> **Última atualização:** 2026-03-25
+> **Última atualização:** 2026-03-26
 > **Provedor:** Supabase (PostgreSQL)
 > **Tipos gerados em:** `src/integrations/supabase/types.ts`
 
@@ -290,3 +290,25 @@ Criada para uso em políticas RLS (não utilizada atualmente — RLS bypass via 
 ### Histórico de correções
 
 - **2026-03-25** — Removida policy `bookings_deny_all` (bloqueava 100% das leituras no cliente anon). Adicionadas policies `clients_select_own`, `bookings_select_own_client` e `bookings_select_influencer` para permitir que clientes e influenciadoras leiam seus próprios dados via Supabase client (usado em `views/client/ClientPages.tsx`).
+- **2026-03-26** — Adicionados campos de OAuth do Instagram na tabela `influencers` (migration `add_instagram_oauth_fields`).
+
+---
+
+## Campos Instagram OAuth — `influencers`
+
+Campos adicionados via migration `add_instagram_oauth_fields`:
+
+| Coluna | Tipo | Descrição |
+| ------ | ---- | --------- |
+| `instagram_user_id` | `text` | ID do usuário na Graph API do Instagram |
+| `instagram_access_token` | `text` | Long-lived access token (válido 60 dias, renovado automaticamente) |
+| `instagram_token_expires_at` | `timestamptz` | Data de expiração do token |
+| `instagram_username` | `text` | Username do Instagram (ex: `@fulana`) |
+| `instagram_followers_count` | `integer` | Contagem de seguidores atualizada via cron diário |
+| `instagram_followers_updated_at` | `timestamptz` | Última atualização automática dos seguidores |
+| `instagram_connected` | `boolean` | `true` quando a conta está conectada e token válido |
+
+Quando `instagram_connected = true`, o feed real do Instagram é exibido no perfil público
+e `instagram_followers_count` sobrescreve o campo manual `seguidores`.
+
+Ver documentação completa em [instagram-integration.md](./instagram-integration.md).

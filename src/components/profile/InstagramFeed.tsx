@@ -1,35 +1,49 @@
-import { Instagram, Heart, MessageCircle, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Instagram, ExternalLink } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface InstagramPost {
-  id: string;
-  imageUrl: string;
-  likes: number;
-  comments: number;
-  caption: string;
+  id: string
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
+  media_url?: string
+  thumbnail_url?: string
+  permalink: string
+  caption?: string
+  timestamp: string
 }
-
-// Mock data — substituir futuramente pela API do Instagram (Meta Graph API)
-const mockPosts: InstagramPost[] = [
-  { id: "1", imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=400&fit=crop", likes: 1243, comments: 87, caption: "Novo look do dia ✨ #fashion #style" },
-  { id: "2", imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", likes: 892, comments: 45, caption: "Parceria incrível com @marca 🤩" },
-  { id: "3", imageUrl: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=400&fit=crop", likes: 2105, comments: 132, caption: "Lançamento exclusivo! Link na bio 🔥" },
-  { id: "4", imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", likes: 756, comments: 29, caption: "Rotina de skincare da manhã 🌿" },
-  { id: "5", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop", likes: 1678, comments: 94, caption: "Unboxing dos presentes que recebi 🎁" },
-  { id: "6", imageUrl: "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400&h=400&fit=crop", likes: 934, comments: 51, caption: "Behind the scenes do ensaio 📸" },
-];
-
-const formatNumber = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
 interface InstagramFeedProps {
-  instagramUrl?: string | null;
-  instagramHandle?: string | null;
+  influencerId: string
+  instagramUrl?: string | null
+  instagramHandle?: string | null
 }
 
-const InstagramFeed = ({ instagramUrl, instagramHandle }: InstagramFeedProps) => {
-  // TODO: Futuramente, buscar posts reais via Meta Graph API
-  // usando o token do Instagram Basic Display API ou Instagram Graph API
-  const posts = mockPosts;
+const InstagramFeed = ({ influencerId, instagramUrl, instagramHandle }: InstagramFeedProps) => {
+  const [posts, setPosts] = useState<InstagramPost[]>([])
+  const [connected, setConnected] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!influencerId) {
+      setLoading(false)
+      return
+    }
+    fetch(`/api/instagram/feed?influencer_id=${influencerId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPosts(data.posts ?? [])
+        setConnected(data.connected ?? false)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [influencerId])
+
+  const igLink =
+    instagramUrl?.startsWith('http')
+      ? instagramUrl
+      : `https://instagram.com/${instagramHandle}`
 
   return (
     <div>
@@ -38,12 +52,8 @@ const InstagramFeed = ({ instagramUrl, instagramHandle }: InstagramFeedProps) =>
           <Instagram size={22} className="text-primary" />
           <h2 className="text-xl md:text-2xl font-bold font-display">Feed do Instagram</h2>
         </div>
-        {instagramUrl && (
-          <a
-            href={instagramUrl.startsWith("http") ? instagramUrl : `https://instagram.com/${instagramHandle}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+        {(instagramUrl || instagramHandle) && connected && (
+          <a href={igLink} target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="flex items-center gap-1.5">
               <ExternalLink size={14} />
               Ver no Instagram
@@ -52,33 +62,44 @@ const InstagramFeed = ({ instagramUrl, instagramHandle }: InstagramFeedProps) =>
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {posts.map((post) => (
-          <div key={post.id} className="group relative aspect-square rounded-xl overflow-hidden bg-muted cursor-pointer">
-            <img
-              src={post.imageUrl}
-              alt={post.caption}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-            />
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-5">
-              <span className="flex items-center gap-1.5 text-background font-semibold text-sm">
-                <Heart size={18} className="fill-background" /> {formatNumber(post.likes)}
-              </span>
-              <span className="flex items-center gap-1.5 text-background font-semibold text-sm">
-                <MessageCircle size={18} className="fill-background" /> {formatNumber(post.comments)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-xs text-muted-foreground text-center mt-4">
-        * Prévia do conteúdo. Visite o perfil no Instagram para ver todos os posts.
-      </p>
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : !connected || posts.length === 0 ? (
+        <div className="bg-card rounded-xl border border-border p-8 text-center">
+          <Instagram size={32} className="mx-auto text-muted-foreground mb-2" />
+          <p className="text-muted-foreground text-sm">
+            Esta influenciadora ainda não conectou seu Instagram
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {posts.map((post) => (
+            <a
+              key={post.id}
+              href={post.permalink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative aspect-square rounded-xl overflow-hidden bg-muted"
+            >
+              <img
+                src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+                alt={post.caption?.slice(0, 80) || 'Post do Instagram'}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <ExternalLink size={20} className="text-background" />
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
-  );
-};
+  )
+}
 
-export default InstagramFeed;
+export default InstagramFeed

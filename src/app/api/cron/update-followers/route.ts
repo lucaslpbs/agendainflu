@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+
+export async function POST(req: NextRequest) {
+  const cronSecret = req.headers.get('x-cron-secret')
+  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: influencers } = await db
+    .from('influencers')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .select('id, instagram_user_id, instagram_access_token, instagram_token_expires_at' as any)
+    .eq('instagram_connected', true as any)
+
+  if (!influencers?.length) {
+    return NextResponse.json({ updated: 0, message: 'Nenhum influencer conectado' })
+  }
+
+  let updated = 0
+  const errors: string[] = []
+  const tenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+
+  for (const inf of influencers) {
+    const record = inf as any
+    if (!record.instagram_user_id || !record.instagram_access_token) continue
+
+    try {
+      // Fetch current followers count
+      const res = await fetch(
+        `https://graph.instagram.com/${record.instagram_user_id}?` +
+          new URLSearchParams({ fields: 'followers_count', access_token: record.instagram_access_token })
+      )
+      const data = await res.json()
+
+      if (data.error) {
+        if (data.error.code === 190) {
+          await db.from('influencers').update({ instagram_connected: false } as any).eq('id', record.id)
+        }
+        errors.push(`${record.id}: ${data.error.message}`)
+        continue
+      }
+
+      const patch: Record<string, unknown> = {
+        instagram_followers_count: data.followers_count,
+        instagram_followers_updated_at: new Date().toISOString(),
+      }
+
+      // Renew token if expiring within 10 days
+      if (record.instagram_token_expires_at && new Date(record.instagram_token_expires_at) < tenDaysFromNow) {
+        const refreshRes = await fetch(
+          'https://graph.instagram.com/refresh_access_token?' +
+            new URLSearchParams({
+              grant_type: 'ig_refresh_token',
+              access_token: record.instagram_access_token,
+            })
+        )
+        const refreshData = await refreshRes.json()
+        if (!refreshData.error && refreshData.access_token) {
+          patch.instagram_access_token = refreshData.access_token
+          patch.instagram_token_expires_at = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      }
+
+      await db.from('influencers').update(patch as any).eq('id', record.id)
+      updated++
+    } catch (err) {
+      errors.push(`${record.id}: ${String(err)}`)
+    }
+  }
+
+  return NextResponse.json({ updated, total: influencers.length, errors })
+}

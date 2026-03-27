@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/apiFetch";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
+import { Upload, Instagram, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 const PerfilPage = () => {
   const { influencer, refreshInfluencer } = useAuth();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [form, setForm] = useState({
     nome: "",
     bio: "",
@@ -21,6 +24,17 @@ const PerfilPage = () => {
     seguidores: "",
   });
 
+  // Handle instagram OAuth redirect result
+  useEffect(() => {
+    const igParam = searchParams.get("instagram");
+    if (igParam === "conectado") {
+      toast.success("Instagram conectado com sucesso!");
+      refreshInfluencer();
+    } else if (igParam === "erro") {
+      toast.error("Falha ao conectar Instagram. Tente novamente.");
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (!influencer) return;
     setForm({
@@ -29,7 +43,9 @@ const PerfilPage = () => {
       nicho: influencer.nicho || "",
       instagram: influencer.instagram || "",
       whatsapp: influencer.whatsapp || "",
-      seguidores: influencer.seguidores || "",
+      seguidores: (influencer as any).instagram_connected
+        ? String((influencer as any).instagram_followers_count ?? influencer.seguidores ?? "")
+        : String(influencer.seguidores ?? ""),
     });
   }, [influencer]);
 
@@ -37,7 +53,21 @@ const PerfilPage = () => {
     if (!influencer) return;
     setLoading(true);
     try {
-      await apiFetch('/api/influencers/' + influencer.username, { method: 'PATCH', body: JSON.stringify(form) });
+      const payload: Record<string, string> = {
+        nome: form.nome,
+        bio: form.bio,
+        nicho: form.nicho,
+        instagram: form.instagram,
+        whatsapp: form.whatsapp,
+      };
+      // Only update manual seguidores when Instagram is not connected
+      if (!(influencer as any).instagram_connected) {
+        payload.seguidores = form.seguidores;
+      }
+      await apiFetch('/api/influencers/' + influencer.username, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
       toast.success("Perfil atualizado!");
       refreshInfluencer();
     } catch (err: any) {
@@ -54,9 +84,29 @@ const PerfilPage = () => {
     const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (uploadError) return toast.error(uploadError.message);
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    await apiFetch('/api/influencers/' + influencer.username, { method: 'PATCH', body: JSON.stringify({ foto_url: data.publicUrl }) });
+    await apiFetch('/api/influencers/' + influencer.username, {
+      method: 'PATCH',
+      body: JSON.stringify({ foto_url: data.publicUrl }),
+    });
     toast.success("Foto atualizada!");
     refreshInfluencer();
+  };
+
+  const handleDisconnectInstagram = async () => {
+    if (!influencer) return;
+    setDisconnecting(true);
+    try {
+      await apiFetch('/api/influencers/' + influencer.username, {
+        method: 'PATCH',
+        body: JSON.stringify({ instagram_connected: false }),
+      });
+      toast.success("Instagram desconectado.");
+      refreshInfluencer();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDisconnecting(false);
+    }
   };
 
   const statusLabel: Record<string, string> = {
@@ -66,11 +116,17 @@ const PerfilPage = () => {
     rejeitada: "❌ Rejeitada",
   };
 
+  const igConnected = (influencer as any)?.instagram_connected;
+  const igUsername = (influencer as any)?.instagram_username;
+  const igFollowers = (influencer as any)?.instagram_followers_count;
+  const igUpdatedAt = (influencer as any)?.instagram_followers_updated_at;
+
   return (
     <PanelLayout>
       <div className="max-w-2xl space-y-6">
         <h2 className="text-xl font-bold">Meu Perfil</h2>
 
+        {/* Profile card */}
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="relative">
@@ -83,7 +139,12 @@ const PerfilPage = () => {
               )}
               <label className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:opacity-90">
                 <Upload size={14} />
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])}
+                />
               </label>
             </div>
             <div>
@@ -108,8 +169,26 @@ const PerfilPage = () => {
                 <input type="text" value={form.nicho} onChange={(e) => setForm({ ...form, nicho: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Seguidores</label>
-                <input type="text" value={form.seguidores} onChange={(e) => setForm({ ...form, seguidores: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
+                <label className="text-sm font-medium mb-1.5 block flex items-center gap-2">
+                  Seguidores
+                  {igConnected && (
+                    <span className="text-xs font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      Atualizado automaticamente
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={form.seguidores}
+                  onChange={(e) => setForm({ ...form, seguidores: e.target.value })}
+                  readOnly={!!igConnected}
+                  className={`w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm ${igConnected ? 'opacity-60 cursor-not-allowed' : ''}`}
+                />
+                {igConnected && igUpdatedAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Atualizado em {new Date(igUpdatedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -128,6 +207,52 @@ const PerfilPage = () => {
           </div>
         </div>
 
+        {/* Instagram connection card */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Instagram size={20} className="text-primary" />
+            <h3 className="font-semibold">Instagram</h3>
+          </div>
+
+          {igConnected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                <span className="font-medium">
+                  @{igUsername}
+                  {igFollowers != null && (
+                    <span className="text-muted-foreground font-normal ml-1">· {igFollowers.toLocaleString('pt-BR')} seguidores</span>
+                  )}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">Feed conectado e atualizado automaticamente para os clientes.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnectInstagram}
+                disabled={disconnecting}
+              >
+                {disconnecting ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+                Desconectar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <p>Conecte seu Instagram para exibir seu feed automaticamente para os clientes e manter seus seguidores atualizados.</p>
+              </div>
+              <a href="/api/auth/instagram/connect">
+                <Button variant="hero" size="sm" className="flex items-center gap-2">
+                  <Instagram size={15} />
+                  Conectar Instagram ao perfil
+                </Button>
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Public link */}
         <div className="bg-card rounded-xl border border-border p-6">
           <h3 className="font-semibold mb-2">Link público do perfil</h3>
           <p className="text-sm text-muted-foreground bg-secondary rounded-lg px-4 py-2 font-mono">
