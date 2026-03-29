@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, MessageCircle, Instagram, ExternalLink, Image, FileText } from "lucide-react";
+import { Check, X, MessageCircle, Instagram, ExternalLink, Image, FileText, Send, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Tables } from "@/integrations/supabase/types";
 
 type BookingWithRelations = Tables<"bookings"> & {
@@ -29,11 +32,64 @@ interface Props {
   onUpdateStatus?: (id: string, status: "confirmado" | "cancelado" | "concluido") => void;
 }
 
+const NOTIFY_ENDPOINT = "/api/bookings/notify-whatsapp";
+
 const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Props) => {
+  const { influencer } = useAuth();
+  const [sending, setSending] = useState(false);
+
   if (!booking) return null;
 
   const b = booking;
   const status = statusConfig[b.status] || statusConfig.pendente;
+
+  const handleSendWhatsApp = async () => {
+    setSending(true);
+    try {
+      const payload = {
+        booking_id: b.id,
+        codigo_confirmacao: b.codigo_confirmacao,
+        status: b.status,
+        data_agendada: b.data_agendada,
+        descricao_produto: b.descricao_produto ?? null,
+        link_negocio: b.link_negocio ?? null,
+        materiais: b.material_url ?? [],
+        observacoes: b.observacoes ?? null,
+        pagamento_confirmado: b.pagamento_confirmado ?? false,
+        cliente: {
+          nome: b.clients?.nome ?? null,
+          empresa: b.clients?.empresa ?? null,
+          whatsapp: b.clients?.whatsapp ?? null,
+          email: b.clients?.email ?? null,
+          instagram: b.clients?.instagram ?? null,
+        },
+        servico: {
+          tipo: b.services?.tipo ?? null,
+          formato: b.services?.formato ?? null,
+          preco: Number(b.services?.preco ?? 0),
+          descricao: b.services?.descricao ?? null,
+        },
+        influencer: {
+          nome: influencer?.nome ?? null,
+          username: influencer?.username ?? null,
+          whatsapp: influencer?.whatsapp ?? null,
+        },
+      };
+
+      const res = await fetch(NOTIFY_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      toast.success("Informações enviadas para o WhatsApp!");
+    } catch {
+      toast.error("Erro ao enviar. Tente novamente.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,7 +197,7 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
                 <div className="space-y-1.5">
                   <span className="text-muted-foreground text-xs">Material enviado</span>
                   <div className="flex flex-wrap gap-2">
-                    {(Array.isArray(b.material_url) ? b.material_url : b.material_url.split(",")).map((url, i) => (
+                    {b.material_url.map((url, i) => (
                       <a key={i} href={url.trim()} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
                       >
@@ -186,6 +242,19 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
                 </Button>
               </a>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleSendWhatsApp}
+              disabled={sending}
+            >
+              {sending ? (
+                <><Loader2 size={14} className="animate-spin" /> Enviando...</>
+              ) : (
+                <><Send size={14} /> Enviar via WhatsApp</>
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>
