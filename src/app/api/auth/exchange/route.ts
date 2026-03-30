@@ -8,13 +8,19 @@ import { createClient } from '@supabase/supabase-js'
 import { signJWT } from '@/lib/jwt'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
+import { exchangeTokenSchema } from '@/lib/schemas'
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase_token } = await req.json()
-    if (!supabase_token) {
-      return NextResponse.json({ error: 'Token obrigatório' }, { status: 400 })
+    const body = await req.json()
+    const parsed = exchangeTokenSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+    const { supabase_token } = parsed.data
 
     // Validar token Supabase
     const anonClient = createClient(

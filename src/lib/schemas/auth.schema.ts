@@ -18,11 +18,22 @@ export const registerInfluencerSchema = z.object({
 });
 
 export const registerClientSchema = z.object({
+  user_id: z.string().uuid("user_id deve ser um UUID válido"),
+  tipo_pessoa: z.enum(["pf", "pj"], { required_error: "tipo_pessoa é obrigatório (pf ou pj)" }),
   nome: z.string().min(1, "nome é obrigatório"),
-  email: z.string().email("email inválido"),
+  email: z.string().email("email inválido").nullish(),
   whatsapp: z.string().min(10, "whatsapp deve ter pelo menos 10 caracteres"),
-  password: z.string().min(6, "senha deve ter pelo menos 6 caracteres"),
-});
+  cnpj: z.string().nullish(),
+  razao_social: z.string().nullish(),
+  cpf: z.string().nullish(),
+  endereco: z.string().nullish(),
+}).refine(
+  (data) => data.tipo_pessoa !== "pj" || (data.cnpj && data.razao_social),
+  { message: "Pessoa Jurídica requer cnpj e razao_social" }
+).refine(
+  (data) => data.tipo_pessoa !== "pf" || data.cpf,
+  { message: "Pessoa Física requer cpf" }
+);
 
 export type ExchangeTokenInput = z.infer<typeof exchangeTokenSchema>;
 export type RegisterInfluencerInput = z.infer<typeof registerInfluencerSchema>;

@@ -7,15 +7,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
+import { registerInfluencerSchema } from '@/lib/schemas'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { user_id, nome, username: rawUsername, whatsapp, bio, nicho, seguidores, instagram, foto_url, email } = body
-
-    if (!user_id || !nome || !whatsapp) {
-      return NextResponse.json({ error: 'user_id, nome e whatsapp são obrigatórios' }, { status: 400 })
+    const parsed = registerInfluencerSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+    const { user_id, nome, username: rawUsername, whatsapp, bio, nicho, seguidores, instagram, foto_url, email } = parsed.data
 
     // Sanitizar username
     const username = (rawUsername || nome)
