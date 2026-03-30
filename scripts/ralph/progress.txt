@@ -14,6 +14,8 @@ Started: Sat Mar 28 23:07:34 PDT 2026
 - Database enums are in Portuguese — always match exact values from `src/integrations/supabase/types.ts`
 - Zod validation pattern in API routes: `safeParse(body)` → if `!success` return 400 with `error.errors.map(e => e.message).join(', ')`
 - Rate limiting: use `rateLimit(req, { key, limit, windowMs })` from `@/lib/rate-limit` — returns `NextResponse | null`; place before try-catch for public endpoints, after auth for user-keyed endpoints
+- For secret comparisons, use `crypto.timingSafeEqual` wrapped in a helper that handles length mismatch (see `cron/update-followers/route.ts`)
+- CORS for API routes is configured in `next.config.mjs` headers() with source `/api/:path*` using `NEXT_PUBLIC_APP_URL`
 
 ---
 
@@ -123,4 +125,16 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - Rate limiter is in-memory; resets on server restart. Fine for single-instance Next.js but not for multi-instance deployments
   - For bookings, rate limit is placed after `requireAuth()` to use user_id as key; for public endpoints, IP is used
   - `x-forwarded-for` header provides the client IP in production (behind reverse proxy)
+---
+
+## 2026-03-29 - US-010
+- Added CORS headers to API routes in `next.config.mjs` using `NEXT_PUBLIC_APP_URL` env var (restricts cross-origin requests to production domain only)
+- CORS headers include: Access-Control-Allow-Origin (app URL), Allow-Methods, Allow-Headers (including X-Cron-Secret), Allow-Credentials
+- Replaced string equality check for `CRON_SECRET` in `src/app/api/cron/update-followers/route.ts` with `crypto.timingSafeEqual` via a helper function
+- The helper handles length mismatch safely (compares against self to avoid timing leak)
+- Files changed: `next.config.mjs`, `src/app/api/cron/update-followers/route.ts`
+- **Learnings for future iterations:**
+  - Next.js CORS is configured via `headers()` in `next.config.mjs` with source pattern `/api/:path*`
+  - `crypto.timingSafeEqual` requires equal-length Buffers — wrap in a helper that handles length mismatch
+  - `NEXT_PUBLIC_APP_URL` env var holds the production domain for CORS origin
 ---

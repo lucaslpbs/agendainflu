@@ -152,7 +152,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Covers US-SEC-009. CSRF tokens deferred to avoid scope creep."
     },
     {
