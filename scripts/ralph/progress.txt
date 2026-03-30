@@ -138,3 +138,16 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - `crypto.timingSafeEqual` requires equal-length Buffers — wrap in a helper that handles length mismatch
   - `NEXT_PUBLIC_APP_URL` env var holds the production domain for CORS origin
 ---
+
+## 2026-03-29 - US-011
+- Created migration `20260329100000_us011_performance_indexes.sql` with performance indexes
+- Indexes added on: clients(influencer_id), clients(whatsapp, influencer_id), bookings(influencer_id), bookings(client_id), bookings(service_id), bookings(data_agendada), bookings(status), bookings(influencer_id, data_agendada), services(influencer_id), services(ativo), influencers(status), waitlist(influencer_id), waitlist(status), user_roles(user_id)
+- Added UNIQUE index on clients(influencer_id, whatsapp) to prevent duplicate clients per influencer
+- Skipped availability(influencer_id, data) — already covered by existing UNIQUE constraint
+- All indexes use `CREATE INDEX IF NOT EXISTS` for idempotency
+- Files created: `supabase/migrations/20260329100000_us011_performance_indexes.sql`
+- **Learnings for future iterations:**
+  - `availability` table already has `UNIQUE(influencer_id, data)` from initial migration — no separate index needed
+  - `user_roles` already has `UNIQUE(user_id, role)` — standalone user_id index still useful for queries filtering only by user_id
+  - Use `CREATE UNIQUE INDEX IF NOT EXISTS` instead of `ALTER TABLE ADD CONSTRAINT` for idempotent unique constraints
+---
