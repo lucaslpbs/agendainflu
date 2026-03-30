@@ -13,6 +13,7 @@ Started: Sat Mar 28 23:07:34 PDT 2026
 - Zod schemas are centralized in `src/lib/schemas/` — import from `src/lib/schemas` barrel export
 - Database enums are in Portuguese — always match exact values from `src/integrations/supabase/types.ts`
 - Zod validation pattern in API routes: `safeParse(body)` → if `!success` return 400 with `error.errors.map(e => e.message).join(', ')`
+- Rate limiting: use `rateLimit(req, { key, limit, windowMs })` from `@/lib/rate-limit` — returns `NextResponse | null`; place before try-catch for public endpoints, after auth for user-keyed endpoints
 
 ---
 
@@ -106,4 +107,20 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - Zod `z.coerce.number()` in service schema replaces manual `parseFloat`/`parseInt` — cleaner and validates in one step
   - Status schemas validate against exact enum values matching the database — no more `as any` needed for status updates
   - The existing schemas in `src/lib/schemas/` already covered all needed validation; no schema changes were required
+---
+
+## 2026-03-29 - US-009
+- Created in-memory rate limiter utility at `src/lib/rate-limit.ts` (no external dependencies)
+- Applied rate limiting to all `/api/auth/*` endpoints: 10 req/min per IP (exchange, logout, me, instagram connect/callback)
+- Applied stricter rate limiting to `/api/auth/register/*`: 3 req/min per IP (influencer and client registration)
+- Applied rate limiting to `/api/bookings` POST: 5 req/min per user (keyed by auth user_id)
+- Applied rate limiting to `/api/waitlist` POST: 5 req/min per IP
+- Rate-limited requests return 429 with `Retry-After` header
+- Files created: `src/lib/rate-limit.ts`
+- Files changed: `src/app/api/auth/exchange/route.ts`, `src/app/api/auth/logout/route.ts`, `src/app/api/auth/me/route.ts`, `src/app/api/auth/register/influencer/route.ts`, `src/app/api/auth/register/client/route.ts`, `src/app/api/auth/instagram/connect/route.ts`, `src/app/api/auth/instagram/callback/route.ts`, `src/app/api/bookings/route.ts`, `src/app/api/waitlist/route.ts`
+- **Learnings for future iterations:**
+  - TypeScript target doesn't support `for...of` on Map — use `.forEach()` instead
+  - Rate limiter is in-memory; resets on server restart. Fine for single-instance Next.js but not for multi-instance deployments
+  - For bookings, rate limit is placed after `requireAuth()` to use user_id as key; for public endpoints, IP is used
+  - `x-forwarded-for` header provides the client IP in production (behind reverse proxy)
 ---
