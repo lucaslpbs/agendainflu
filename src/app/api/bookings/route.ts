@@ -5,19 +5,21 @@ import { apiError } from '@/lib/errors'
 import { generateBookingCode } from '@/lib/booking-code'
 import { sendWhatsApp } from '@/lib/wa'
 import { format, addDays } from 'date-fns'
+import { createBookingSchema } from '@/lib/schemas'
 
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth(req)
     const body = await req.json()
-    const { influencer_id, service_id, data_agendada, descricao_produto, link_negocio, material_url, observacoes } = body
-
-    if (!influencer_id || !service_id || !data_agendada || !descricao_produto) {
+    const parsed = createBookingSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'influencer_id, service_id, data_agendada e descricao_produto sao obrigatorios' },
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
         { status: 400 }
       )
     }
+
+    const { influencer_id, service_id, data_agendada, descricao_produto, link_negocio, material_url, observacoes } = parsed.data
 
     const materialUrls: string[] = Array.isArray(material_url) ? material_url : []
     const minDate = format(addDays(new Date(), 2), 'yyyy-MM-dd')

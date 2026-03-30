@@ -3,15 +3,20 @@ import { db } from '@/lib/db'
 import { requireInfluencer, getAuthUser } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
+import { createWaitlistSchema } from '@/lib/schemas'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { influencer_id, nome, whatsapp, email, empresa, mensagem } = body
-
-    if (!nome || !whatsapp) {
-      return NextResponse.json({ error: 'nome e whatsapp sao obrigatorios' }, { status: 400 })
+    const parsed = createWaitlistSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+
+    const { influencer_id, nome, whatsapp, email, empresa, mensagem } = parsed.data
 
     // Verificar se ja e cliente ativo
     if (influencer_id) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireInfluencer } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
+import { createServiceSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,11 +34,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tipo, formato, preco, descricao, max_por_dia } = body
-
-    if (!tipo || !formato || !preco) {
-      return NextResponse.json({ error: 'tipo, formato e preco são obrigatórios' }, { status: 400 })
+    const parsed = createServiceSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+
+    const { tipo, formato, preco, descricao, max_por_dia } = parsed.data
 
     const { data, error } = await db
       .from('services')
@@ -45,9 +50,9 @@ export async function POST(req: NextRequest) {
         influencer_id: auth.influencer_id,
         tipo,
         formato,
-        preco: parseFloat(preco),
+        preco,
         descricao: descricao || null,
-        max_por_dia: parseInt(max_por_dia) || 1,
+        max_por_dia,
         ativo: true,
       })
       .select()
