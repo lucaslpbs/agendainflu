@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { timingSafeEqual } from 'crypto'
+
+function timingSafeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    // Compare against self to avoid timing leak on length mismatch
+    timingSafeEqual(bufA, bufA)
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
+}
 
 export async function POST(req: NextRequest) {
   const cronSecret = req.headers.get('x-cron-secret')
-  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !cronSecret || !timingSafeCompare(cronSecret, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
