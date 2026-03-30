@@ -1,0 +1,109 @@
+# Ralph Progress Log
+Started: Sat Mar 28 23:07:34 PDT 2026
+---
+
+## Codebase Patterns
+- Pre-existing typecheck errors exist (TS2589 in cron/update-followers, TS2339 in BookingDetailDialog) — these are not blockers for commits
+- `.env.local` is already in `.gitignore`; use `.env.example` for documenting required env vars
+- `src/lib/db.ts` creates a Supabase client with service_role key for server-side API routes
+- Many files have pre-existing uncommitted changes in the working tree — only stage files you actually changed
+- `next.config.mjs` uses ESM; image remote patterns must stay in sync with CSP img-src in headers()
+- For RLS policies, use `DROP POLICY IF EXISTS` + `CREATE POLICY` since Postgres doesn't support `CREATE POLICY IF NOT EXISTS`
+- `clients` table has a `user_id` column (added in migration 4) linking to `auth.users` for client self-access
+- Zod schemas are centralized in `src/lib/schemas/` — import from `src/lib/schemas` barrel export
+- Database enums are in Portuguese — always match exact values from `src/integrations/supabase/types.ts`
+- Zod validation pattern in API routes: `safeParse(body)` → if `!success` return 400 with `error.errors.map(e => e.message).join(', ')`
+
+---
+
+## 2026-03-28 - US-001
+- Replaced hardcoded N8N webhook URL with `process.env.N8N_WEBHOOK_URL` in notify-whatsapp route
+- Removed ANON_KEY fallback in `src/lib/db.ts`; now throws error if SERVICE_ROLE_KEY is missing in production
+- Added `N8N_WEBHOOK_URL=""` to `.env.example`
+- Files changed: `.env.example`, `src/app/api/bookings/notify-whatsapp/route.ts`, `src/lib/db.ts`
+- **Learnings for future iterations:**
+  - The working directory has many pre-existing uncommitted changes — always stage only your specific files
+  - Typecheck has 3 pre-existing errors — do not try to fix them as part of unrelated stories
+  - The codebase uses Portuguese comments and variable names in some places
+---
+
+## 2026-03-28 - US-002
+- Footer.tsx already uses `{new Date().getFullYear()}` — no code change needed
+- Updated stale doc `docs/src/components/landing/outros.md` to reflect dynamic copyright
+- Files changed: `docs/src/components/landing/outros.md`
+- **Learnings for future iterations:**
+  - Footer copyright was already dynamic — the PRD description was based on stale docs
+  - Documentation files in `docs/` may be out of date with actual code; verify code before changing it
+---
+
+## 2026-03-28 - US-003
+- Added `headers()` async function to `next.config.mjs` with all required security headers
+- Headers: X-Frame-Options DENY, X-Content-Type-Options nosniff, Strict-Transport-Security (2yr, includeSubDomains, preload), X-XSS-Protection, Referrer-Policy strict-origin-when-cross-origin, Content-Security-Policy
+- CSP allows: self, Supabase domains (*.supabase.co), image sources (i.pravatar.cc, picsum.photos, *.cdninstagram.com), data/blob URIs for images, wss for Supabase realtime
+- Files changed: `next.config.mjs`
+- **Learnings for future iterations:**
+  - `next.config.mjs` uses ESM (export default) — keep this pattern
+  - Image remote patterns in next.config.mjs must stay in sync with CSP img-src
+  - CSP needs 'unsafe-inline' and 'unsafe-eval' for Next.js to work properly in dev/prod
+---
+
+## 2026-03-29 - US-004
+- Changed `sameSite` from `'lax'` to `'strict'` in `src/app/api/auth/exchange/route.ts` cookie config
+- Added UUID regex validation for `state` parameter in `src/app/api/auth/instagram/callback/route.ts` before it's used in `.eq('id', state)` database query
+- Files changed: `src/app/api/auth/exchange/route.ts`, `src/app/api/auth/instagram/callback/route.ts`
+- **Learnings for future iterations:**
+  - The Instagram OAuth callback uses `state` param as an `influencer_id` — always validate as UUID
+  - Auth cookie is set in exchange/route.ts with httpOnly, secure (prod), strict sameSite, 7-day expiry
+---
+
+## 2026-03-29 - US-005
+- Created migration `20260329000000_us005_rls_policies.sql` with missing RLS policies
+- Added: Clients can SELECT their own records on `clients` table via `user_id = auth.uid()`
+- Added: Clients can SELECT their own bookings via `client_id` relationship through `clients` table
+- Added: DELETE policies for `influencers` (own + admin), `services`, `availability`, `client_profiles` (own + admin)
+- All policies use `DROP POLICY IF EXISTS` + `CREATE POLICY` for idempotency
+- Files changed: `supabase/migrations/20260329000000_us005_rls_policies.sql`
+- **Learnings for future iterations:**
+  - Postgres doesn't support `CREATE POLICY IF NOT EXISTS` — use `DROP POLICY IF EXISTS` + `CREATE POLICY`
+  - `services` and `availability` already had `FOR ALL` policies covering DELETE, but explicit DELETE policies added for clarity
+  - `clients.user_id` was added in migration 4 and links to `auth.users` for client self-access
+---
+
+## 2026-03-29 - US-006
+- Created centralized Zod validation schemas in `src/lib/schemas/`
+- Files created: `booking.schema.ts`, `auth.schema.ts`, `service.schema.ts`, `client.schema.ts`, `waitlist.schema.ts`, `status.schema.ts`, `index.ts` (barrel export)
+- Schemas cover: booking creation, auth exchange/register, service creation (with `z.coerce` for max_por_dia/preco), client validation, waitlist creation, and all status enums (booking, client, influencer, waitlist)
+- **Learnings for future iterations:**
+  - Zod is already installed in the project — no need to add it
+  - Use `z.coerce.number()` for fields that may come as strings from forms (e.g., `max_por_dia`, `preco`)
+  - Database enums are in Portuguese — match them exactly: `pendente`, `confirmado`, `concluido`, `cancelado`, etc.
+  - WhatsApp format in Brazil: `(XX) XXXXX-XXXX` — regex pattern: `/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/`
+---
+
+## 2026-03-29 - US-007
+- Applied Zod validation to all 3 auth endpoints: exchange, register/influencer, register/client
+- Updated `registerClientSchema` to match the actual endpoint fields (user_id, tipo_pessoa, cnpj, etc.) instead of the placeholder schema
+- Used `.refine()` for conditional validation (PJ requires cnpj+razao_social, PF requires cpf)
+- All invalid requests now return 400 with descriptive Zod error messages
+- Files changed: `src/app/api/auth/exchange/route.ts`, `src/app/api/auth/register/influencer/route.ts`, `src/app/api/auth/register/client/route.ts`, `src/lib/schemas/auth.schema.ts`
+- **Learnings for future iterations:**
+  - The original `registerClientSchema` didn't match the actual endpoint — always verify schemas against route implementations
+  - Use `z.refine()` for conditional field validation (e.g., PJ vs PF requirements)
+  - Pattern for Zod in routes: `safeParse` → check `success` → return 400 with `error.errors.map(e => e.message).join(', ')`
+---
+
+## 2026-03-29 - US-008
+- Applied Zod validation to all 6 remaining mutation endpoints:
+  - `/api/bookings/route.ts` POST → `createBookingSchema`
+  - `/api/services/route.ts` POST → `createServiceSchema` (replaced `parseFloat`/`parseInt` with Zod coercion)
+  - `/api/admin/bookings/route.ts` PATCH → `updateBookingStatusSchema`
+  - `/api/admin/waitlist/route.ts` PATCH → `updateWaitlistStatusSchema`
+  - `/api/clients/[id]/status/route.ts` PATCH → `updateClientStatusSchema`
+  - `/api/waitlist/route.ts` POST → `createWaitlistSchema`
+- All invalid requests now return 400 with descriptive Zod error messages
+- Files changed: `src/app/api/bookings/route.ts`, `src/app/api/services/route.ts`, `src/app/api/admin/bookings/route.ts`, `src/app/api/admin/waitlist/route.ts`, `src/app/api/clients/[id]/status/route.ts`, `src/app/api/waitlist/route.ts`
+- **Learnings for future iterations:**
+  - Zod `z.coerce.number()` in service schema replaces manual `parseFloat`/`parseInt` — cleaner and validates in one step
+  - Status schemas validate against exact enum values matching the database — no more `as any` needed for status updates
+  - The existing schemas in `src/lib/schemas/` already covered all needed validation; no schema changes were required
+---
