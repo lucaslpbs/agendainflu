@@ -6,10 +6,14 @@ import { generateBookingCode } from '@/lib/booking-code'
 import { sendWhatsApp } from '@/lib/wa'
 import { format, addDays } from 'date-fns'
 import { createBookingSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth(req)
+
+    const rl = rateLimit(req, { key: `bookings:${auth.user_id}`, limit: 5, windowMs: 60_000 })
+    if (rl) return rl
     const body = await req.json()
     const parsed = createBookingSchema.safeParse(body)
     if (!parsed.success) {

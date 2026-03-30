@@ -7,8 +7,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
 import { registerClientSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-register', limit: 3, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const body = await req.json()
     const parsed = registerClientSchema.safeParse(body)

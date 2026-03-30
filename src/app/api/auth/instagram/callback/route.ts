@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-instagram', limit: 10, windowMs: 60_000 })
+  if (rl) return rl
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const metaAppId = process.env.META_APP_ID
   const metaAppSecret = process.env.META_APP_SECRET

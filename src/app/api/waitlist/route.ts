@@ -4,8 +4,12 @@ import { requireInfluencer, getAuthUser } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
 import { createWaitlistSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'waitlist', limit: 5, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const body = await req.json()
     const parsed = createWaitlistSchema.safeParse(body)

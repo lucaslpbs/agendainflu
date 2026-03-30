@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-me', limit: 10, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const auth = await requireAuth(req)
 
