@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   const state = url.searchParams.get('state') // influencer_id
   const oauthError = url.searchParams.get('error')
 
-  if (oauthError || !code || !state) {
+  // Validate state is a valid UUID to prevent injection
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (oauthError || !code || !state || !uuidRegex.test(state)) {
     return NextResponse.redirect(`${appUrl}/painel/perfil?instagram=erro`)
   }
 
