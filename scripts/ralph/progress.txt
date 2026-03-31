@@ -169,3 +169,15 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - `SECURITY DEFINER` on Postgres functions bypasses RLS, needed for service-level operations
   - `SELECT ... FOR UPDATE` in Postgres locks rows until transaction commits — use for preventing concurrent reads of stale data
 ---
+
+## 2026-03-30 - US-013
+- Fixed `max_por_dia` not being used in availability calculation at `/api/influencers/[slug]/availability/route.ts`
+- Previously, the code fetched `max_por_dia` from services but never used it — the `maxPorDia` map was computed but ignored
+- Now checks per-service capacity: a day is available only if at least one active service hasn't reached its `max_por_dia`
+- Also enforces effective slots as `Math.min(slots_disponiveis, totalMaxPorDia)` to respect both constraints
+- Files changed: `src/app/api/influencers/[slug]/availability/route.ts`
+- **Learnings for future iterations:**
+  - `availability.slots_disponiveis` is the influencer's overall daily capacity; `services.max_por_dia` is per-service — both must be checked
+  - A day is available if: not blocked AND total bookings < effective slots AND at least one service still has capacity
+  - Dead code can accumulate (the `maxPorDia` variable was computed but never referenced) — watch for unused variables
+---
