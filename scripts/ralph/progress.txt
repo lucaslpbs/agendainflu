@@ -181,3 +181,16 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - A day is available if: not blocked AND total bookings < effective slots AND at least one service still has capacity
   - Dead code can accumulate (the `maxPorDia` variable was computed but never referenced) — watch for unused variables
 ---
+
+## 2026-03-30 - US-014
+- Added Zod validation for the `mes` query parameter in `/api/availability/route.ts`
+- Validates YYYY-MM format with month constrained to 01-12 via regex
+- Invalid `mes` values now return 400 with descriptive error message
+- Added comment documenting the `new Date(year, month, 0).getDate()` trick for last day of month
+- Parsed year/month as numbers instead of passing strings to `parseInt` inline
+- Files changed: `src/app/api/availability/route.ts`
+- **Learnings for future iterations:**
+  - `new Date(year, month, 0).getDate()` returns the last day of month because day 0 of the next month wraps back
+  - The `mes` parameter format is `YYYY-MM` — consistent with ISO date prefix format used elsewhere
+  - Zod regex validation is effective for query param format + range validation in one step
+---
