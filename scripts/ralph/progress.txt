@@ -204,3 +204,14 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - The bookings/route.ts uses `Promise.all` for two WhatsApp sends — wrapping the entire `Promise.all` in try-catch handles both
   - The bookings/[id]/status/route.ts uses the return value of sendWhatsApp (`mensagem_enviada`) — the try-catch preserves the default `false` value on failure
 ---
+
+## 2026-03-30 - US-016
+- Replaced sequential booking code (`AI-2026-0001`) with cryptographically random code (`AI-A1B2C3D4`)
+- Uses `crypto.randomUUID()` sliced to 8 hex characters for unpredictable but human-readable codes
+- Function changed from async to sync since it no longer queries the database — callers using `await` are unaffected
+- Files changed: `src/lib/booking-code.ts`
+- **Learnings for future iterations:**
+  - `await` on a non-Promise value just returns it, so changing async→sync is backwards compatible
+  - `crypto.randomUUID()` is available in Node.js without imports but using `import crypto` is cleaner for TypeScript
+  - The old code had a race condition too (two concurrent bookings could get the same count)
+---
