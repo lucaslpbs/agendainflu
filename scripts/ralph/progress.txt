@@ -215,3 +215,17 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - `crypto.randomUUID()` is available in Node.js without imports but using `import crypto` is cleaner for TypeScript
   - The old code had a race condition too (two concurrent bookings could get the same count)
 ---
+
+## 2026-03-30 - US-017
+- Added AbortController with 10s timeout to all external fetch calls
+- Instagram OAuth callback (`auth/instagram/callback/route.ts`): 3 fetch calls (short token, long token, user info) — each gets its own AbortController
+- Instagram feed (`instagram/feed/route.ts`): 1 fetch call for media endpoint
+- Cron update-followers (`cron/update-followers/route.ts`): 2 fetch calls (followers count, token refresh)
+- All timeouts are cleared after successful fetch to avoid memory leaks
+- Timeout errors are caught by existing try-catch blocks and return appropriate error responses
+- Files changed: `src/app/api/auth/instagram/callback/route.ts`, `src/app/api/instagram/feed/route.ts`, `src/app/api/cron/update-followers/route.ts`
+- **Learnings for future iterations:**
+  - Always `clearTimeout()` after the fetch resolves to prevent the abort from firing on a completed request
+  - Each fetch needs its own AbortController — they cannot be reused after abort
+  - The existing try-catch blocks already handle AbortError (it becomes a generic error caught by catch)
+---
