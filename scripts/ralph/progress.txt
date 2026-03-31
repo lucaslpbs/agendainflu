@@ -16,6 +16,8 @@ Started: Sat Mar 28 23:07:34 PDT 2026
 - Rate limiting: use `rateLimit(req, { key, limit, windowMs })` from `@/lib/rate-limit` — returns `NextResponse | null`; place before try-catch for public endpoints, after auth for user-keyed endpoints
 - For secret comparisons, use `crypto.timingSafeEqual` wrapped in a helper that handles length mismatch (see `cron/update-followers/route.ts`)
 - CORS for API routes is configured in `next.config.mjs` headers() with source `/api/:path*` using `NEXT_PUBLIC_APP_URL`
+- For atomic database operations, use Postgres functions via `db.rpc()` — add function types to `src/integrations/supabase/types.ts` under `Functions`
+- When adding RPC functions, use `SECURITY DEFINER` to bypass RLS for service-level operations
 
 ---
 
@@ -150,4 +152,20 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - `availability` table already has `UNIQUE(influencer_id, data)` from initial migration — no separate index needed
   - `user_roles` already has `UNIQUE(user_id, role)` — standalone user_id index still useful for queries filtering only by user_id
   - Use `CREATE UNIQUE INDEX IF NOT EXISTS` instead of `ALTER TABLE ADD CONSTRAINT` for idempotent unique constraints
+---
+
+## 2026-03-30 - US-012
+- Fixed race conditions in booking creation by introducing two Postgres functions called via `db.rpc()`
+- `upsert_booking_client`: Atomically finds or creates a client using `SELECT ... FOR UPDATE` + `INSERT ... ON CONFLICT`, preventing duplicate clients from concurrent requests
+- `create_booking_atomic`: Atomically checks availability (with row lock on `availability` table) and inserts booking, preventing overbooking
+- Combined client_profile + influencer lookups into a single `Promise.all()` to reduce sequential queries
+- Service validation moved into the atomic booking function to reduce round trips
+- Added RPC function type definitions to `src/integrations/supabase/types.ts`
+- Files created: `supabase/migrations/20260330000000_us012_atomic_booking.sql`
+- Files changed: `src/app/api/bookings/route.ts`, `src/integrations/supabase/types.ts`
+- **Learnings for future iterations:**
+  - Supabase JS client doesn't support transactions — use Postgres functions via `db.rpc()` for atomic operations
+  - RPC function types must be added to `src/integrations/supabase/types.ts` under `Functions` or typecheck fails with `'never'` errors
+  - `SECURITY DEFINER` on Postgres functions bypasses RLS, needed for service-level operations
+  - `SELECT ... FOR UPDATE` in Postgres locks rows until transaction commits — use for preventing concurrent reads of stale data
 ---

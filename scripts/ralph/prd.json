@@ -180,7 +180,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Covers BUG-002, BUG-003, US-PERF-003."
     },
     {
