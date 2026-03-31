@@ -531,7 +531,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      upsert_booking_client: {
+        Args: {
+          p_influencer_id: string
+          p_user_id: string
+          p_nome: string
+          p_whatsapp: string
+          p_email: string
+          p_empresa?: string | null
+          p_status?: string
+          p_origem?: string
+        }
+        Returns: Json
+      }
+      create_booking_atomic: {
+        Args: {
+          p_influencer_id: string
+          p_client_id: string
+          p_service_id: string
+          p_data_agendada: string
+          p_codigo_confirmacao: string
+          p_descricao_produto?: string | null
+          p_link_negocio?: string | null
+          p_material_url?: string | null
+          p_observacoes?: string | null
+          p_status?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       booking_status: "pendente" | "confirmado" | "concluido" | "cancelado"
