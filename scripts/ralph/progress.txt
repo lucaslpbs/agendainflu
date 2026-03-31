@@ -194,3 +194,13 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - The `mes` parameter format is `YYYY-MM` — consistent with ISO date prefix format used elsewhere
   - Zod regex validation is effective for query param format + range validation in one step
 ---
+
+## 2026-03-30 - US-015
+- Wrapped all sendWhatsApp calls in try-catch blocks across 7 files so failures don't break the main operation
+- Errors are logged with `console.error` but do not propagate to the outer catch (which would return an error response)
+- Files changed: `src/app/api/admin/influencers/[id]/approve/route.ts`, `src/app/api/admin/influencers/[id]/reject/route.ts`, `src/app/api/auth/register/influencer/route.ts`, `src/app/api/bookings/route.ts`, `src/app/api/bookings/[id]/status/route.ts`, `src/app/api/waitlist/route.ts`, `src/app/api/waitlist/[id]/status/route.ts`
+- **Learnings for future iterations:**
+  - There are 7 sendWhatsApp call sites (not 5 as stated in the PRD) — the waitlist routes also have calls
+  - The bookings/route.ts uses `Promise.all` for two WhatsApp sends — wrapping the entire `Promise.all` in try-catch handles both
+  - The bookings/[id]/status/route.ts uses the return value of sendWhatsApp (`mensagem_enviada`) — the try-catch preserves the default `false` value on failure
+---
