@@ -67,10 +67,14 @@ export async function POST(req: NextRequest) {
 
     // Notificar admin via WhatsApp
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    await sendWhatsApp(
-      process.env.NEXT_PUBLIC_SUPPORT_WA || '',
-      `🔔 Nova influenciadora cadastrada!\nNome: ${nome}\nUsername: @${username}\nWhatsApp: ${whatsapp}\nAcesse: ${appUrl}/admin/influenciadoras`
-    )
+    try {
+      await sendWhatsApp(
+        process.env.NEXT_PUBLIC_SUPPORT_WA || '',
+        `🔔 Nova influenciadora cadastrada!\nNome: ${nome}\nUsername: @${username}\nWhatsApp: ${whatsapp}\nAcesse: ${appUrl}/admin/influenciadoras`
+      )
+    } catch (waErr) {
+      console.error('WhatsApp notification failed (register influencer):', waErr)
+    }
 
     return NextResponse.json(
       { message: 'Cadastro recebido! Aguarde análise da equipe.', influencer_id: inf.id },

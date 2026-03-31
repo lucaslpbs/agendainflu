@@ -100,10 +100,14 @@ export async function POST(req: NextRequest) {
     const dataFormatada = new Date(data_agendada + 'T12:00:00').toLocaleDateString('pt-BR')
     const valorFormatado = 'R$ ' + Number(booking.service_preco).toFixed(2)
 
-    await Promise.all([
-      clientWa ? sendWhatsApp(clientWa, 'Pedido recebido, ' + clientNome + '! Agendamento com ' + inf?.nome + ' registrado. Data: ' + dataFormatada + ' | Servico: ' + booking.service_tipo + ' | Valor: ' + valorFormatado + ' | Codigo: ' + codigo_confirmacao) : Promise.resolve(false),
-      inf?.whatsapp ? sendWhatsApp(inf.whatsapp, 'Novo agendamento! ' + clientNome + ' | ' + clientEmpresa + ' | ' + booking.service_tipo + ' | ' + dataFormatada + ' | ' + valorFormatado + ' | ' + appUrl + '/painel/agendamentos') : Promise.resolve(false),
-    ])
+    try {
+      await Promise.all([
+        clientWa ? sendWhatsApp(clientWa, 'Pedido recebido, ' + clientNome + '! Agendamento com ' + inf?.nome + ' registrado. Data: ' + dataFormatada + ' | Servico: ' + booking.service_tipo + ' | Valor: ' + valorFormatado + ' | Codigo: ' + codigo_confirmacao) : Promise.resolve(false),
+        inf?.whatsapp ? sendWhatsApp(inf.whatsapp, 'Novo agendamento! ' + clientNome + ' | ' + clientEmpresa + ' | ' + booking.service_tipo + ' | ' + dataFormatada + ' | ' + valorFormatado + ' | ' + appUrl + '/painel/agendamentos') : Promise.resolve(false),
+      ])
+    } catch (waErr) {
+      console.error('WhatsApp notification failed (booking creation):', waErr)
+    }
 
     const wa_link = inf?.whatsapp
       ? 'https://wa.me/' + inf.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Ola ' + inf.nome + '! Codigo: ' + codigo_confirmacao)

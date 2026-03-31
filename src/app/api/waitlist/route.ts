@@ -74,11 +74,19 @@ export async function POST(req: NextRequest) {
       if (inf) {
         infNome = inf.nome
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-        await sendWhatsApp(inf.whatsapp || '', 'Nova entrada na lista de espera! Nome: ' + nome + ' | Empresa: ' + (empresa || '-') + ' | WA: ' + whatsapp + ' | ' + appUrl + '/painel/lista-espera')
+        try {
+          await sendWhatsApp(inf.whatsapp || '', 'Nova entrada na lista de espera! Nome: ' + nome + ' | Empresa: ' + (empresa || '-') + ' | WA: ' + whatsapp + ' | ' + appUrl + '/painel/lista-espera')
+        } catch (waErr) {
+          console.error('WhatsApp notification failed (waitlist notify influencer):', waErr)
+        }
       }
     }
 
-    await sendWhatsApp(whatsapp, 'Ola, ' + nome + '! Recebemos seu interesse em divulgar com ' + infNome + '. Voce entrou na lista de espera e sera contatado(a) em breve.')
+    try {
+      await sendWhatsApp(whatsapp, 'Ola, ' + nome + '! Recebemos seu interesse em divulgar com ' + infNome + '. Voce entrou na lista de espera e sera contatado(a) em breve.')
+    } catch (waErr) {
+      console.error('WhatsApp notification failed (waitlist confirmation):', waErr)
+    }
 
     return NextResponse.json({ message: 'Solicitacao recebida!' }, { status: 201 })
   } catch (e) {
