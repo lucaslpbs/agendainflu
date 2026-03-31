@@ -229,3 +229,18 @@ Started: Sat Mar 28 23:07:34 PDT 2026
   - Each fetch needs its own AbortController — they cannot be reused after abort
   - The existing try-catch blocks already handle AbortError (it becomes a generic error caught by catch)
 ---
+
+## 2026-03-30 - US-018
+- Created migration `20260330100000_us018_material_url_array.sql` to alter `bookings.material_url` from TEXT to TEXT[]
+- Used `string_to_array(material_url, ',')` in USING clause to convert existing comma-separated data
+- Recreated `create_booking_atomic` RPC function with `p_material_url TEXT[]` parameter instead of `TEXT`
+- Updated `/api/bookings/route.ts` to pass the array directly instead of joining with commas
+- Updated RPC type in `types.ts` to `string[] | null`
+- Frontend (`AgendarServico.tsx`) and display (`BookingDetailDialog.tsx`) already handled arrays — no changes needed
+- Files created: `supabase/migrations/20260330100000_us018_material_url_array.sql`
+- Files changed: `src/app/api/bookings/route.ts`, `src/integrations/supabase/types.ts`
+- **Learnings for future iterations:**
+  - The TypeScript types and frontend were already treating `material_url` as `string[]` — only the DB column and RPC function were still TEXT
+  - When altering column types, use `USING` clause to convert existing data (e.g., `string_to_array` for TEXT→TEXT[])
+  - `CREATE OR REPLACE FUNCTION` must include the full function body — use it to update RPC parameter types
+---
