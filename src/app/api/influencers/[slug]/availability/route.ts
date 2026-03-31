@@ -41,10 +41,8 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       .eq('influencer_id', influencerId)
       .eq('ativo', true)
 
-    const maxPorDia = (services || []).reduce((acc, s) => {
-      acc[s.id] = s.max_por_dia || 1
-      return acc
-    }, {} as Record<string, number>)
+    const activeServices = services || []
+    const totalMaxPorDia = activeServices.reduce((sum, s) => sum + (s.max_por_dia || 1), 0)
 
     const result = dates.map(date => {
       const av = avRes.data?.find(a => a.data === date)
@@ -53,11 +51,28 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       const bloqueado = av?.bloqueado ?? false
       const ocupados = dayBookings.length
 
+      // Check per-service capacity: a day is available only if at least one
+      // active service hasn't reached its max_por_dia
+      let hasServiceCapacity = true
+      if (activeServices.length > 0) {
+        const bookingsByService: Record<string, number> = {}
+        for (const b of dayBookings) {
+          bookingsByService[b.service_id] = (bookingsByService[b.service_id] || 0) + 1
+        }
+        hasServiceCapacity = activeServices.some(s => {
+          const count = bookingsByService[s.id] || 0
+          return count < (s.max_por_dia || 1)
+        })
+      }
+
+      // Effective capacity is the minimum of slots_disponiveis and total max_por_dia
+      const effectiveSlots = Math.min(slotsDisponiveis, totalMaxPorDia || slotsDisponiveis)
+
       return {
         data: date,
-        disponivel: !bloqueado && ocupados < slotsDisponiveis,
+        disponivel: !bloqueado && ocupados < effectiveSlots && hasServiceCapacity,
         bloqueado,
-        slots_disponiveis: slotsDisponiveis,
+        slots_disponiveis: effectiveSlots,
         slots_ocupados: ocupados,
       }
     })
