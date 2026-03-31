@@ -27,24 +27,32 @@ export async function GET(req: NextRequest) {
 
   try {
     // 1. Exchange code for short-lived token
+    const tokenController = new AbortController()
+    const tokenTimeout = setTimeout(() => tokenController.abort(), 10_000)
     const tokenRes = await fetch(
       'https://graph.facebook.com/v19.0/oauth/access_token?' +
-        new URLSearchParams({ client_id: metaAppId, client_secret: metaAppSecret, redirect_uri: redirectUri, code })
+        new URLSearchParams({ client_id: metaAppId, client_secret: metaAppSecret, redirect_uri: redirectUri, code }),
+      { signal: tokenController.signal }
     )
+    clearTimeout(tokenTimeout)
     const tokenData = await tokenRes.json()
     if (tokenData.error || !tokenData.access_token) {
       throw new Error(tokenData.error?.message || 'Falha ao obter token curto')
     }
 
     // 2. Exchange for long-lived token (valid 60 days)
+    const longTokenController = new AbortController()
+    const longTokenTimeout = setTimeout(() => longTokenController.abort(), 10_000)
     const longTokenRes = await fetch(
       'https://graph.instagram.com/access_token?' +
         new URLSearchParams({
           grant_type: 'ig_exchange_token',
           client_secret: metaAppSecret,
           access_token: tokenData.access_token,
-        })
+        }),
+      { signal: longTokenController.signal }
     )
+    clearTimeout(longTokenTimeout)
     const longTokenData = await longTokenRes.json()
     if (longTokenData.error || !longTokenData.access_token) {
       throw new Error(longTokenData.error?.message || 'Falha ao obter token longo')
@@ -52,10 +60,14 @@ export async function GET(req: NextRequest) {
     const longLivedToken: string = longTokenData.access_token
 
     // 3. Fetch Instagram user info
+    const meController = new AbortController()
+    const meTimeout = setTimeout(() => meController.abort(), 10_000)
     const meRes = await fetch(
       'https://graph.instagram.com/me?' +
-        new URLSearchParams({ fields: 'id,username,followers_count', access_token: longLivedToken })
+        new URLSearchParams({ fields: 'id,username,followers_count', access_token: longLivedToken }),
+      { signal: meController.signal }
     )
+    clearTimeout(meTimeout)
     const meData = await meRes.json()
     if (meData.error || !meData.id) {
       throw new Error(meData.error?.message || 'Falha ao obter dados do Instagram')

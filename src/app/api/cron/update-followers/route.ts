@@ -39,10 +39,14 @@ export async function POST(req: NextRequest) {
 
     try {
       // Fetch current followers count
+      const followersController = new AbortController()
+      const followersTimeout = setTimeout(() => followersController.abort(), 10_000)
       const res = await fetch(
         `https://graph.instagram.com/${record.instagram_user_id}?` +
-          new URLSearchParams({ fields: 'followers_count', access_token: record.instagram_access_token })
+          new URLSearchParams({ fields: 'followers_count', access_token: record.instagram_access_token }),
+        { signal: followersController.signal }
       )
+      clearTimeout(followersTimeout)
       const data = await res.json()
 
       if (data.error) {
@@ -60,13 +64,17 @@ export async function POST(req: NextRequest) {
 
       // Renew token if expiring within 10 days
       if (record.instagram_token_expires_at && new Date(record.instagram_token_expires_at) < tenDaysFromNow) {
+        const refreshController = new AbortController()
+        const refreshTimeout = setTimeout(() => refreshController.abort(), 10_000)
         const refreshRes = await fetch(
           'https://graph.instagram.com/refresh_access_token?' +
             new URLSearchParams({
               grant_type: 'ig_refresh_token',
               access_token: record.instagram_access_token,
-            })
+            }),
+          { signal: refreshController.signal }
         )
+        clearTimeout(refreshTimeout)
         const refreshData = await refreshRes.json()
         if (!refreshData.error && refreshData.access_token) {
           patch.instagram_access_token = refreshData.access_token

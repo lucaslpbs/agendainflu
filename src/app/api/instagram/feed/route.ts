@@ -22,14 +22,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
     const mediaRes = await fetch(
       `https://graph.instagram.com/${record.instagram_user_id}/media?` +
         new URLSearchParams({
           fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp',
           limit: '12',
           access_token: record.instagram_access_token,
-        })
+        }),
+      { signal: controller.signal }
     )
+    clearTimeout(timeout)
     const mediaData = await mediaRes.json()
 
     if (mediaData.error) {
