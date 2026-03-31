@@ -553,7 +553,7 @@ export type Database = {
           p_codigo_confirmacao: string
           p_descricao_produto?: string | null
           p_link_negocio?: string | null
-          p_material_url?: string | null
+          p_material_url?: string[] | null
           p_observacoes?: string | null
           p_status?: string
         }

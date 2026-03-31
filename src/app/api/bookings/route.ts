@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       p_codigo_confirmacao: codigo_confirmacao,
       p_descricao_produto: descricao_produto || null,
       p_link_negocio: link_negocio || null,
-      p_material_url: materialUrls.length > 0 ? materialUrls.join(',') : null,
+      p_material_url: materialUrls.length > 0 ? materialUrls : null,
       p_observacoes: observacoes || null,
       p_status: clientRow.status === 'ativo' ? 'confirmado' : 'pendente',
     })
