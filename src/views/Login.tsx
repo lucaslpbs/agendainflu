@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
@@ -17,18 +16,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"password" | "magic">("password");
 
-  const redirectByRole = async (userId: string) => {
-    // Check roles to redirect appropriately
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    const roleList = roles?.map((r) => r.role) || [];
-
-    if (roleList.includes("admin")) {
+  const redirectByRole = (role: string) => {
+    if (role === "admin") {
       router.push("/admin");
-    } else if (roleList.includes("influencer")) {
+    } else if (role === "influencer") {
       router.push("/painel");
     } else {
       router.push("/cliente/explorar");
@@ -39,14 +30,27 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error.message);
-    } else {
+      return;
+    }
+
+    // Exchange Supabase token for the app JWT (sets auth-token cookie)
+    const accessToken = data.session?.access_token;
+    if (accessToken) {
+      const res = await fetch('/api/auth/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supabase_token: accessToken }),
+      });
+      const exchanged = res.ok ? await res.json() : null;
+      setLoading(false);
       toast.success("Login realizado com sucesso!");
-      if (data.user) {
-        await redirectByRole(data.user.id);
-      }
+      redirectByRole(exchanged?.role ?? 'client');
+    } else {
+      setLoading(false);
+      toast.error("Erro ao obter sessão. Tente novamente.");
     }
   };
 
