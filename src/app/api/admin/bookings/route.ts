@@ -3,18 +3,25 @@ import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
 import { updateBookingStatusSchema } from '@/lib/schemas'
+import { parsePagination, paginatedResult } from '@/lib/pagination'
 
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req)
 
-    const { data, error } = await db
-      .from('bookings')
-      .select('*, services(preco, tipo), clients(nome, whatsapp, empresa), influencers(nome, username)')
-      .order('data_agendada', { ascending: false })
+    const pagination = parsePagination(req, { sort: 'data_agendada', order: 'desc' })
+    const offset = (pagination.page - 1) * pagination.limit
 
-    if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    const [countRes, dataRes] = await Promise.all([
+      db.from('bookings').select('id', { count: 'exact', head: true }),
+      db.from('bookings')
+        .select('*, services(preco, tipo), clients(nome, whatsapp, empresa), influencers(nome, username)')
+        .order(pagination.sort || 'data_agendada', { ascending: pagination.order === 'asc' })
+        .range(offset, offset + pagination.limit - 1),
+    ])
+
+    if (dataRes.error) throw dataRes.error
+    return NextResponse.json(paginatedResult(dataRes.data || [], countRes.count || 0, pagination))
   } catch (e) {
     return apiError(e)
   }
