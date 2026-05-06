@@ -33,7 +33,13 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       preco: auth ? s.preco : null,
     }))
 
-    return NextResponse.json({ influencer, services: servicesData })
+    const cacheHeader = auth
+      ? 'private, no-store'
+      : 'public, s-maxage=60, stale-while-revalidate=300'
+
+    return NextResponse.json({ influencer, services: servicesData }, {
+      headers: { 'Cache-Control': cacheHeader },
+    })
   } catch (e) {
     return apiError(e)
   }

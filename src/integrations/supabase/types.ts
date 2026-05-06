@@ -284,6 +284,13 @@ export type Database = {
           foto_url: string | null
           id: string
           instagram: string | null
+          instagram_access_token: string | null
+          instagram_connected: boolean
+          instagram_followers_count: number | null
+          instagram_followers_updated_at: string | null
+          instagram_token_expires_at: string | null
+          instagram_user_id: string | null
+          instagram_username: string | null
           marcas_parceiras: number | null
           nicho: string | null
           nome: string
@@ -306,6 +313,13 @@ export type Database = {
           foto_url?: string | null
           id?: string
           instagram?: string | null
+          instagram_access_token?: string | null
+          instagram_connected?: boolean
+          instagram_followers_count?: number | null
+          instagram_followers_updated_at?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           marcas_parceiras?: number | null
           nicho?: string | null
           nome: string
@@ -328,6 +342,13 @@ export type Database = {
           foto_url?: string | null
           id?: string
           instagram?: string | null
+          instagram_access_token?: string | null
+          instagram_connected?: boolean
+          instagram_followers_count?: number | null
+          instagram_followers_updated_at?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           marcas_parceiras?: number | null
           nicho?: string | null
           nome?: string
@@ -475,6 +496,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          id: string
+          booking_id: string
+          client_id: string
+          influencer_id: string
+          rating: number
+          texto: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          client_id: string
+          influencer_id: string
+          rating: number
+          texto?: string | null
+          criado_em?: string
+        }
+        Update: {
+          rating?: number
+          texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       waitlist: {
         Row: {

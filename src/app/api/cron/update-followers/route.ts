@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: influencers } = await db
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: influencers } = await (db as any)
     .from('influencers')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .select('id, instagram_user_id, instagram_access_token, instagram_token_expires_at' as any)
-    .eq('instagram_connected', true as any)
+    .select('id, instagram_user_id, instagram_access_token, instagram_token_expires_at')
+    .eq('instagram_connected', true)
 
   if (!influencers?.length) {
     return NextResponse.json({ updated: 0, message: 'Nenhum influencer conectado' })

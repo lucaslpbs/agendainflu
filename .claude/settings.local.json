@@ -63,7 +63,10 @@
       "Bash(grep -r \"import.*dynamic\\\\|import.*lazy\" /workspace/src --include=*.tsx)",
       "Bash(grep -r \"review\\\\|comment\\\\|feedback\" /workspace/src/app/api --include=*.ts)",
       "Bash(grep -r \"next/image\\\\|Image\\\\s*from\\\\s*['''']next\" /workspace/src --include=*.tsx)",
-      "Bash(grep -r dynamic\\\\\\(/workspace/src --include=*.tsx)"
+      "Bash(grep -r dynamic\\\\\\(/workspace/src --include=*.tsx)",
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\api\\\\reviews\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\api\\\\influencers\\\\[slug]\\\\stats\" -Force)"
     ]
   },
   "disabledMcpjsonServers": [

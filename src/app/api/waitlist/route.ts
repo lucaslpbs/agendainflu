@@ -5,6 +5,7 @@ import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
 import { createWaitlistSchema } from '@/lib/schemas'
 import { rateLimit } from '@/lib/rate-limit'
+import { parsePagination, paginatedResult } from '@/lib/pagination'
 
 export async function POST(req: NextRequest) {
   const rl = rateLimit(req, { key: 'waitlist', limit: 5, windowMs: 60_000 })
@@ -102,17 +103,30 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
 
-    let query = db
+    const pagination = parsePagination(req, { sort: 'criado_em', order: 'desc' })
+    const offset = (pagination.page - 1) * pagination.limit
+
+    let countQuery = db
+      .from('waitlist')
+      .select('id', { count: 'exact', head: true })
+      .eq('influencer_id', auth.influencer_id)
+
+    let dataQuery = db
       .from('waitlist')
       .select('*')
       .eq('influencer_id', auth.influencer_id)
-      .order('criado_em', { ascending: false })
+      .order(pagination.sort || 'criado_em', { ascending: pagination.order === 'asc' })
+      .range(offset, offset + pagination.limit - 1)
 
-    if (status) query = query.eq('status', status as any)
+    if (status) {
+      countQuery = countQuery.eq('status', status as any)
+      dataQuery = dataQuery.eq('status', status as any)
+    }
 
-    const { data, error } = await query
-    if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    const [countRes, dataRes] = await Promise.all([countQuery, dataQuery])
+    if (dataRes.error) throw dataRes.error
+
+    return NextResponse.json(paginatedResult(dataRes.data || [], countRes.count || 0, pagination))
   } catch (e) {
     return apiError(e)
   }

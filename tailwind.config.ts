@@ -104,6 +104,16 @@ export default {
         "slide-in-right": "slide-in-right 0.5s ease-out forwards",
         "float": "float 3s ease-in-out infinite",
       },
+      spacing: {
+        "18": "4.5rem",
+        "22": "5.5rem",
+      },
+      boxShadow: {
+        "rosa": "0 10px 40px -10px hsl(340 82% 43% / 0.25)",
+        "gold": "0 10px 40px -10px hsl(43 89% 38% / 0.25)",
+        "card": "0 1px 3px 0 hsl(340 30% 15% / 0.08), 0 1px 2px -1px hsl(340 30% 15% / 0.05)",
+        "elevated": "0 4px 20px -4px hsl(340 30% 15% / 0.12)",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

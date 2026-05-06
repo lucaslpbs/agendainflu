@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 import type { BookingWithRelations } from "@/hooks/usePanelData";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const CalendarioPage = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -97,15 +98,6 @@ const CalendarioPage = () => {
   const selectedBookings = selectedDate ? bookings.filter((b) => b.data_agendada === selectedDate) : [];
   const selectedAv = selectedDate ? availability.find((a) => a.data === selectedDate) : null;
 
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pendente: "bg-accent/20 text-accent",
-      confirmado: "bg-primary/20 text-primary",
-      concluido: "bg-green-100 text-green-700",
-      cancelado: "bg-destructive/20 text-destructive",
-    };
-    return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{status}</span>;
-  };
 
   return (
     <PanelLayout>
@@ -217,7 +209,7 @@ const CalendarioPage = () => {
                         <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border cursor-pointer hover:bg-secondary/80 transition-colors" onClick={() => setDetailBooking(b)}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-sm">{b.clients?.nome || "Cliente"}</span>
-                            {statusBadge(b.status)}
+                            <StatusBadge status={b.status} />
                           </div>
                           <p className="text-xs text-muted-foreground">{b.services?.tipo}</p>
                           {b.descricao_produto && <p className="text-xs text-muted-foreground mt-1">{b.descricao_produto}</p>}

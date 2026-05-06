@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useClients, useAddClient, useUpdateClientStatus } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, MessageCircle, Ban, CheckCircle } from "lucide-react";
 
@@ -62,12 +63,12 @@ const ClientesPage = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h2 className="text-xl font-bold">Base de Clientes</h2>
           <div className="flex gap-2 w-full sm:w-auto">
-            <input
+            <Input
               type="text"
               placeholder="Buscar..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="flex-1 sm:w-60 px-4 py-2 rounded-lg border border-input bg-background text-sm"
+              className="flex-1 sm:w-60"
             />
             <Button variant="hero" size="sm" onClick={() => setShowForm(true)}>
               <Plus size={16} className="mr-1" /> Adicionar
@@ -79,10 +80,10 @@ const ClientesPage = () => {
           <div className="bg-card rounded-xl border border-border p-6 space-y-4 animate-fade-in">
             <h3 className="font-semibold">Novo cliente</h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              <input type="text" placeholder="Nome *" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
-              <input type="tel" placeholder="WhatsApp *" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} className="px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
-              <input type="email" placeholder="E-mail" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
-              <input type="text" placeholder="Empresa" value={form.empresa} onChange={(e) => setForm({ ...form, empresa: e.target.value })} className="px-4 py-2.5 rounded-lg border border-input bg-background text-sm" />
+              <Input type="text" placeholder="Nome *" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <Input type="tel" placeholder="WhatsApp *" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
+              <Input type="email" placeholder="E-mail" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <Input type="text" placeholder="Empresa" value={form.empresa} onChange={(e) => setForm({ ...form, empresa: e.target.value })} />
             </div>
             <textarea rows={2} placeholder="Notas" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm resize-none" />
             <div className="flex gap-2">

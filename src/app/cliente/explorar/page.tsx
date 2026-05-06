@@ -1,4 +1,4 @@
-import { ClientExplore } from '@/views/client/ClientPages'
+import { ClientExplore } from '@/views/client/ClientExplore'
 
 export default function ClienteExplorarPage() {
   return <ClientExplore />

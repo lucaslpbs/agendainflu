@@ -15,6 +15,7 @@ export {
 } from "./service.schema";
 export { clientSchema, type ClientInput } from "./client.schema";
 export { createWaitlistSchema, type CreateWaitlistInput } from "./waitlist.schema";
+export { createReviewSchema, type CreateReviewInput } from "./review.schema";
 export {
   bookingStatusEnum,
   clientStatusEnum,

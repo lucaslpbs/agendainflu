@@ -4,9 +4,12 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'i.pravatar.cc' },
       { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'cdninstagram.com' },
       { protocol: 'https', hostname: '*.cdninstagram.com' },
       { protocol: 'https', hostname: 'scontent.cdninstagram.com' },
+      { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
   async headers() {
@@ -62,7 +65,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://i.pravatar.cc https://picsum.photos https://*.cdninstagram.com https://scontent.cdninstagram.com https://*.supabase.co",
+              "img-src 'self' data: blob: https://i.pravatar.cc https://picsum.photos https://images.unsplash.com https://ui-avatars.com https://*.cdninstagram.com https://scontent.cdninstagram.com https://*.supabase.co",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
               "frame-ancestors 'none'",

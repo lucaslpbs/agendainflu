@@ -1,0 +1,52 @@
+'use client'
+
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+interface PaginationControlsProps {
+  page: number
+  totalPages: number
+  hasNext: boolean
+  onPageChange: (page: number) => void
+  className?: string
+}
+
+export function PaginationControls({
+  page,
+  totalPages,
+  hasNext,
+  onPageChange,
+  className = '',
+}: PaginationControlsProps) {
+  if (totalPages <= 1) return null
+
+  return (
+    <div className={`flex items-center justify-center gap-2 py-4 ${className}`}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Anterior
+      </Button>
+
+      <span className="text-sm text-muted-foreground px-2">
+        Página {page} de {totalPages}
+      </span>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(page + 1)}
+        disabled={!hasNext}
+        aria-label="Próxima página"
+      >
+        Próxima
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}

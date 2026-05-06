@@ -77,7 +77,6 @@ export async function GET(req: NextRequest) {
     const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
     const { error: updateError } = await db
       .from('influencers')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update({
         instagram_user_id: meData.id,
         instagram_access_token: longLivedToken,
@@ -86,7 +85,7 @@ export async function GET(req: NextRequest) {
         instagram_followers_count: meData.followers_count ?? null,
         instagram_followers_updated_at: new Date().toISOString(),
         instagram_connected: true,
-      } as any)
+      })
       .eq('id', state)
 
     if (updateError) throw updateError

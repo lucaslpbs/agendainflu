@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   const oauthUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth')
   oauthUrl.searchParams.set('client_id', metaAppId)
   oauthUrl.searchParams.set('redirect_uri', redirectUri)
-  oauthUrl.searchParams.set('scope', 'instagram_basic,instagram_manage_insights,pages_show_list')
+  oauthUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_insights,pages_show_list')
   oauthUrl.searchParams.set('response_type', 'code')
   oauthUrl.searchParams.set('state', influencerId)
 

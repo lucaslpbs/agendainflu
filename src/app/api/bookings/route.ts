@@ -7,6 +7,7 @@ import { sendWhatsApp } from '@/lib/wa'
 import { format, addDays } from 'date-fns'
 import { createBookingSchema } from '@/lib/schemas'
 import { rateLimit } from '@/lib/rate-limit'
+import { parsePagination, paginatedResult } from '@/lib/pagination'
 
 export async function POST(req: NextRequest) {
   try {
@@ -140,19 +141,38 @@ export async function GET(req: NextRequest) {
     const data_inicio = searchParams.get('data_inicio')
     const data_fim = searchParams.get('data_fim')
 
-    let query = db
+    const pagination = parsePagination(req, { sort: 'data_agendada', order: 'asc' })
+    const offset = (pagination.page - 1) * pagination.limit
+
+    let countQuery = db
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('influencer_id', auth.influencer_id)
+
+    let dataQuery = db
       .from('bookings')
       .select('*, clients(*), services(*)')
       .eq('influencer_id', auth.influencer_id)
-      .order('data_agendada', { ascending: true })
+      .order(pagination.sort || 'data_agendada', { ascending: pagination.order === 'asc' })
+      .range(offset, offset + pagination.limit - 1)
 
-    if (status) query = query.eq('status', status as any)
-    if (data_inicio) query = query.gte('data_agendada', data_inicio)
-    if (data_fim) query = query.lte('data_agendada', data_fim)
+    if (status) {
+      countQuery = countQuery.eq('status', status as any)
+      dataQuery = dataQuery.eq('status', status as any)
+    }
+    if (data_inicio) {
+      countQuery = countQuery.gte('data_agendada', data_inicio)
+      dataQuery = dataQuery.gte('data_agendada', data_inicio)
+    }
+    if (data_fim) {
+      countQuery = countQuery.lte('data_agendada', data_fim)
+      dataQuery = dataQuery.lte('data_agendada', data_fim)
+    }
 
-    const { data, error } = await query
-    if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    const [countRes, dataRes] = await Promise.all([countQuery, dataQuery])
+    if (dataRes.error) throw dataRes.error
+
+    return NextResponse.json(paginatedResult(dataRes.data || [], countRes.count || 0, pagination))
   } catch (e) {
     return apiError(e)
   }

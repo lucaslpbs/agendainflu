@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +22,9 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
 
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+    })
   } catch (e) {
     return apiError(e)
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireInfluencer } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
+import { parsePagination, paginatedResult } from '@/lib/pagination'
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,18 +13,35 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const busca = searchParams.get('busca')
 
-    let query = db
+    const pagination = parsePagination(req, { sort: 'created_at', order: 'desc' })
+    const offset = (pagination.page - 1) * pagination.limit
+
+    let countQuery = db
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('influencer_id', auth.influencer_id)
+
+    let dataQuery = db
       .from('clients')
       .select('*')
       .eq('influencer_id', auth.influencer_id)
-      .order('created_at', { ascending: false })
+      .order(pagination.sort || 'created_at', { ascending: pagination.order === 'asc' })
+      .range(offset, offset + pagination.limit - 1)
 
-    if (status) query = query.eq('status', status as any)
-    if (busca) query = query.or('nome.ilike.%' + busca + '%,empresa.ilike.%' + busca + '%,whatsapp.ilike.%' + busca + '%')
+    if (status) {
+      countQuery = countQuery.eq('status', status as any)
+      dataQuery = dataQuery.eq('status', status as any)
+    }
+    if (busca) {
+      const filter = 'nome.ilike.%' + busca + '%,empresa.ilike.%' + busca + '%,whatsapp.ilike.%' + busca + '%'
+      countQuery = countQuery.or(filter)
+      dataQuery = dataQuery.or(filter)
+    }
 
-    const { data, error } = await query
-    if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    const [countRes, dataRes] = await Promise.all([countQuery, dataQuery])
+    if (dataRes.error) throw dataRes.error
+
+    return NextResponse.json(paginatedResult(dataRes.data || [], countRes.count || 0, pagination))
   } catch (e) {
     return apiError(e)
   }
