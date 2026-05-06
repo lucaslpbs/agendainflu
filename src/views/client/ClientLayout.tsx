@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import {
   ClipboardList, UserCircle, LogOut, Menu, X, Compass
 } from "lucide-react";
 
-export const ClientLayout = ({ children, title }: { children: React.ReactNode; title: string }) => {
+const ClientLayoutInner = ({ children, title }: { children: React.ReactNode; title: string }) => {
   const { signOut, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -66,5 +66,13 @@ export const ClientLayout = ({ children, title }: { children: React.ReactNode; t
         <main className="flex-1 p-6 lg:p-8 overflow-auto">{children}</main>
       </div>
     </div>
+  );
+};
+
+export const ClientLayout = ({ children, title }: { children: React.ReactNode; title: string }) => {
+  return (
+    <Suspense fallback={null}>
+      <ClientLayoutInner title={title}>{children}</ClientLayoutInner>
+    </Suspense>
   );
 };
