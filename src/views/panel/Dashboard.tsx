@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBookings, useClients, useWaitlist } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
@@ -24,6 +25,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 
 const Dashboard = () => {
   const { influencer } = useAuth();
+  const router = useRouter();
   const [dailyViewMonth, setDailyViewMonth] = useState(new Date());
 
   const { data: allBookings = [], isLoading } = useBookings();
@@ -82,10 +84,10 @@ const Dashboard = () => {
   const recentBookings = allBookings.slice(0, 5);
 
   const cards = [
-    { label: "Total Agendamentos", value: stats.bookings, icon: CalendarCheck },
-    { label: "Pendentes", value: stats.pending, icon: ClipboardList },
-    { label: "Clientes Ativos", value: stats.clients, icon: Users },
-    { label: "Receita Total", value: `R$ ${revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, highlight: true },
+    { label: "Total Agendamentos", value: stats.bookings, icon: CalendarCheck, href: "/painel/agendamentos" },
+    { label: "Pendentes", value: stats.pending, icon: ClipboardList, href: "/painel/agendamentos?status=pendente" },
+    { label: "Clientes Ativos", value: stats.clients, icon: Users, href: "/painel/clientes" },
+    { label: "Receita Total", value: `R$ ${revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, highlight: true, href: "/painel/agendamentos" },
   ];
 
   if (isLoading) {
@@ -114,7 +116,14 @@ const Dashboard = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((c) =>
             c.highlight ? (
-              <div key={c.label} className="bg-primary/5 rounded-2xl border border-primary/20 p-6 hover:shadow-sm transition-all hover:scale-[1.01]">
+              <div
+                key={c.label}
+                className="bg-primary/5 rounded-2xl border border-primary/20 p-6 hover:shadow-sm transition-all hover:scale-[1.01] cursor-pointer active:scale-[0.98]"
+                onClick={() => router.push(c.href)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(c.href)}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
                     <c.icon size={20} className="text-primary" />
@@ -125,7 +134,14 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground mt-1">{c.label}</p>
               </div>
             ) : (
-              <div key={c.label} className="bg-card rounded-2xl border border-border p-6 hover:shadow-sm transition-all hover:scale-[1.01]">
+              <div
+                key={c.label}
+                className="bg-card rounded-2xl border border-border p-6 hover:shadow-sm transition-all hover:scale-[1.01] cursor-pointer active:scale-[0.98]"
+                onClick={() => router.push(c.href)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(c.href)}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center">
                     <c.icon size={20} className="text-primary" />

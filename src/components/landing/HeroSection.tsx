@@ -39,22 +39,23 @@ const HeroSection = () => {
             </Button>
           </div>
 
-          <div className="animate-fade-in flex justify-center pt-2" style={{ animationDelay: "0.4s" }}>
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-8 py-4 inline-flex gap-8">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">500+</p>
-                <p className="text-xs text-muted-foreground">Marcas</p>
-              </div>
-              <div className="border-r border-border/40" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">120+</p>
-                <p className="text-xs text-muted-foreground">Influenciadoras</p>
-              </div>
-              <div className="border-r border-border/40" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">R$ 2M+</p>
-                <p className="text-xs text-muted-foreground">em Negócios</p>
-              </div>
+          <div className="flex justify-center animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-4 inline-flex flex-wrap justify-center gap-x-6 gap-y-3 border border-border/20">
+              {[
+                { value: "500+", label: "Marcas" },
+                { value: "120+", label: "Influenciadoras" },
+                { value: "R$ 2M+", label: "em Negócios" },
+              ].map((stat, i, arr) => (
+                <div key={stat.value} className="flex items-center gap-4">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary leading-tight">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">{stat.label}</p>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div className="h-8 w-px bg-border/40 hidden sm:block" />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
