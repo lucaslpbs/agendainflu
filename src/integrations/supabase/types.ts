@@ -282,6 +282,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           foto_url: string | null
+          fotos: string[] | null
           id: string
           instagram: string | null
           instagram_access_token: string | null
@@ -311,6 +312,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           foto_url?: string | null
+          fotos?: string[] | null
           id?: string
           instagram?: string | null
           instagram_access_token?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           foto_url?: string | null
+          fotos?: string[] | null
           id?: string
           instagram?: string | null
           instagram_access_token?: string | null

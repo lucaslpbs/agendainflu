@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from 'next/image'
-import { Star, Instagram, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2, Lock } from "lucide-react";
+import { Star, Instagram, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2, Lock, ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +30,7 @@ const InfluencerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [isExistingClient, setIsExistingClient] = useState(false);
   const [realStats, setRealStats] = useState<any>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,10 +123,20 @@ const InfluencerProfile = () => {
 
       {/* Hero Banner */}
       <div className="relative pt-16">
-        <div className="h-48 md:h-64 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_70%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--accent)/0.1),transparent_70%)]" />
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        <div className="h-48 md:h-64 relative overflow-hidden">
+          {influencer.cover_url ? (
+            <>
+              <Image src={influencer.cover_url} alt="Capa" fill priority className="object-cover" />
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent" />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_70%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--accent)/0.1),transparent_70%)]" />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+            </>
+          )}
         </div>
 
         {/* Profile Card */}
@@ -217,6 +228,34 @@ const InfluencerProfile = () => {
               <div className="mt-6 pt-6 border-t border-border">
                 <h3 className="text-sm font-semibold text-foreground mb-2">Sobre</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{influencer.bio}</p>
+              </div>
+            )}
+
+            {/* Galeria de fotos */}
+            {influencer.fotos && influencer.fotos.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <ImageIcon size={16} className="text-primary" />
+                  Portfólio
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {influencer.fotos.slice(0, 6).map((foto, idx) => (
+                    <div
+                      key={idx}
+                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
+                      onClick={() => setSelectedPhoto(foto)}
+                    >
+                      <Image
+                        src={foto}
+                        alt={`Foto ${idx + 1} de ${influencer.nome}`}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                        sizes="(max-width: 768px) 33vw, 20vw"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -351,6 +390,43 @@ const InfluencerProfile = () => {
       </div>
 
       <Footer />
+
+      {/* Lightbox */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <Image
+              src={selectedPhoto}
+              alt="Foto ampliada"
+              fill
+              className="object-contain"
+              sizes="90vw"
+            />
+            <button
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <X size={20} />
+            </button>
+            {influencer.fotos && influencer.fotos.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {influencer.fotos.map((foto, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); setSelectedPhoto(foto); }}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      selectedPhoto === foto ? "bg-white" : "bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

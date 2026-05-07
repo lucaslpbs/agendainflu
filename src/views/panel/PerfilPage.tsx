@@ -8,13 +8,15 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/apiFetch";
 import { toast } from "sonner";
-import { Upload, Instagram, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, Instagram, CheckCircle2, AlertCircle, Loader2, X, ImagePlus } from "lucide-react";
 
 const PerfilPage = () => {
   const { influencer, refreshInfluencer } = useAuth();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [photosUploading, setPhotosUploading] = useState(false);
   const [form, setForm] = useState({
     nome: "",
     bio: "",
@@ -90,6 +92,60 @@ const PerfilPage = () => {
     });
     toast.success("Foto atualizada!");
     refreshInfluencer();
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    if (!influencer) return;
+    setCoverUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${influencer.id}/cover/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("influencer-photos").upload(path, file, { upsert: true });
+      if (uploadError) { toast.error(uploadError.message); return; }
+      const { data } = supabase.storage.from("influencer-photos").getPublicUrl(path);
+      await supabase.from("influencers").update({ cover_url: data.publicUrl }).eq("id", influencer.id);
+      toast.success("Capa atualizada!");
+      refreshInfluencer();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const handleAddPhoto = async (file: File) => {
+    if (!influencer) return;
+    const currentPhotos: string[] = (influencer as any).fotos || [];
+    if (currentPhotos.length >= 6) { toast.error("Máximo de 6 fotos permitidas."); return; }
+    setPhotosUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${influencer.id}/photos/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("influencer-photos").upload(path, file, { upsert: true });
+      if (uploadError) { toast.error(uploadError.message); return; }
+      const { data } = supabase.storage.from("influencer-photos").getPublicUrl(path);
+      const updatedPhotos = [...currentPhotos, data.publicUrl];
+      await supabase.from("influencers").update({ fotos: updatedPhotos }).eq("id", influencer.id);
+      toast.success("Foto adicionada!");
+      refreshInfluencer();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setPhotosUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async (url: string) => {
+    if (!influencer) return;
+    const currentPhotos: string[] = (influencer as any).fotos || [];
+    const updatedPhotos = currentPhotos.filter(p => p !== url);
+    try {
+      await supabase.from("influencers").update({ fotos: updatedPhotos }).eq("id", influencer.id);
+      toast.success("Foto removida!");
+      refreshInfluencer();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleDisconnectInstagram = async () => {
@@ -204,6 +260,54 @@ const PerfilPage = () => {
             <Button variant="hero" onClick={handleSave} disabled={loading}>
               {loading ? "Salvando..." : "Salvar alterações"}
             </Button>
+          </div>
+        </div>
+
+        {/* Cover photo card */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="font-semibold mb-4">Foto de Capa</h3>
+          {(influencer as any).cover_url ? (
+            <div className="relative w-full h-36 rounded-lg overflow-hidden mb-4 border border-border">
+              <img src={(influencer as any).cover_url} alt="Capa" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-full h-36 rounded-lg bg-secondary flex items-center justify-center mb-4 border border-dashed border-border">
+              <p className="text-sm text-muted-foreground">Nenhuma capa cadastrada</p>
+            </div>
+          )}
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <Button variant="outline" size="sm" asChild>
+              <span>
+                {coverUploading ? <Loader2 size={14} className="animate-spin mr-1" /> : <Upload size={14} className="mr-1" />}
+                {(influencer as any).cover_url ? "Trocar capa" : "Enviar capa"}
+              </span>
+            </Button>
+            <input type="file" accept="image/*" className="hidden" disabled={coverUploading} onChange={(e) => e.target.files?.[0] && handleCoverUpload(e.target.files[0])} />
+          </label>
+        </div>
+
+        {/* Profile photos card */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="font-semibold mb-4">Fotos do Perfil <span className="text-xs text-muted-foreground font-normal">(máx. 6)</span></h3>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {((influencer as any).fotos as string[] || []).map((url: string) => (
+              <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-border">
+                <img src={url} alt="Foto" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleRemovePhoto(url)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+            {((influencer as any).fotos?.length ?? 0) < 6 && (
+              <label className="aspect-square rounded-lg border border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:bg-secondary transition-colors">
+                {photosUploading ? <Loader2 size={20} className="animate-spin text-muted-foreground" /> : <ImagePlus size={20} className="text-muted-foreground" />}
+                <span className="text-xs text-muted-foreground mt-1">Adicionar</span>
+                <input type="file" accept="image/*" className="hidden" disabled={photosUploading} onChange={(e) => e.target.files?.[0] && handleAddPhoto(e.target.files[0])} />
+              </label>
+            )}
           </div>
         </div>
 
