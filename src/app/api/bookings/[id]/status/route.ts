@@ -82,6 +82,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json({ booking: updated, mensagem_enviada })
   } catch (e) {
+    console.error('[PATCH /api/bookings/[id]/status] Error:', e)
     return apiError(e)
   }
 }

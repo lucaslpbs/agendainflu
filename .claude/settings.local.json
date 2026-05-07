@@ -66,7 +66,13 @@
       "Bash(grep -r dynamic\\\\\\(/workspace/src --include=*.tsx)",
       "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\api\\\\reviews\" -Force)",
       "Bash(Out-Null)",
-      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\api\\\\influencers\\\\[slug]\\\\stats\" -Force)"
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\api\\\\influencers\\\\[slug]\\\\stats\" -Force)",
+      "Bash(Get-Content \"C:\\\\Users\\\\gabri\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-gabri-source-repos-agendainflu\\\\682d2c08-d48a-4d92-9ba3-791637723b4c\\\\tasks\\\\bcslwveuf.output\" -Tail 80)",
+      "Bash(tail -80 \"/mnt/c/Users/gabri/AppData/Local/Temp/claude/c--Users-gabri-source-repos-agendainflu/682d2c08-d48a-4d92-9ba3-791637723b4c/tasks/bcslwveuf.output\" 2>/dev/null || cat \"C:/Users/gabri/AppData/Local/Temp/claude/c--Users-gabri-source-repos-agendainflu/682d2c08-d48a-4d92-9ba3-791637723b4c/tasks/bcslwveuf.output\" 2>/dev/null | tail -80)",
+      "Read(//mnt/c/Users/gabri/AppData/Local/Temp/claude/c--Users-gabri-source-repos-agendainflu/682d2c08-d48a-4d92-9ba3-791637723b4c/tasks/**)",
+      "Bash(cd /mnt/c/Users/gabri/source/repos/agendainflu && npx tsc --noEmit 2>&1)",
+      "Read(//mnt/c/Users/gabri/source/repos/**)",
+      "PowerShell(npx tsc --noEmit 2>&1)"
     ]
   },
   "disabledMcpjsonServers": [

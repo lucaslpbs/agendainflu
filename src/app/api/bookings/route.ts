@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
       mensagens_enviadas: true,
     }, { status: 201 })
   } catch (e) {
+    console.error('[POST /api/bookings] Error:', e)
     return apiError(e)
   }
 }

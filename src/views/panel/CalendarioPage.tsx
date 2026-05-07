@@ -6,7 +6,7 @@ import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X, CheckSquare, Square } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
@@ -19,6 +19,12 @@ const CalendarioPage = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingSlots, setEditingSlots] = useState<number>(1);
   const [detailBooking, setDetailBooking] = useState<BookingWithRelations | null>(null);
+
+  const [multiMode, setMultiMode] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [multiSlots, setMultiSlots] = useState(1);
+  const [multiBlocked, setMultiBlocked] = useState(false);
+  const [savingMulti, setSavingMulti] = useState(false);
 
   const { data, isLoading } = useCalendario(currentMonth);
   const availability = data?.availability ?? [];
@@ -70,6 +76,40 @@ const CalendarioPage = () => {
     setEditingSlots(av?.slots_disponiveis || 1);
   };
 
+  const toggleMultiDate = (dateStr: string) => {
+    setSelectedDates(prev =>
+      prev.includes(dateStr)
+        ? prev.filter(d => d !== dateStr)
+        : [...prev, dateStr]
+    );
+  };
+
+  const saveMultiDays = async () => {
+    if (selectedDates.length === 0) {
+      toast.error("Selecione pelo menos um dia");
+      return;
+    }
+    setSavingMulti(true);
+    try {
+      await Promise.all(
+        selectedDates.map(date =>
+          saveAvailability.mutateAsync({
+            data: date,
+            bloqueado: multiBlocked,
+            slots_disponiveis: multiSlots,
+          })
+        )
+      );
+      toast.success(`${selectedDates.length} dia(s) atualizado(s) com sucesso!`);
+      setSelectedDates([]);
+      setMultiMode(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingMulti(false);
+    }
+  };
+
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
   const startDay = startOfMonth(currentMonth).getDay();
 
@@ -105,14 +145,27 @@ const CalendarioPage = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold font-display">Calendário</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-              <ChevronLeft size={18} />
-            </Button>
-            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </span>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-              <ChevronRight size={18} />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                <ChevronLeft size={18} />
+              </Button>
+              <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+                {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                <ChevronRight size={18} />
+              </Button>
+            </div>
+            <Button
+              variant={multiMode ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                setMultiMode(!multiMode);
+                setSelectedDates([]);
+              }}
+            >
+              {multiMode ? <><X size={14} /> Cancelar seleção</> : <><CheckSquare size={14} /> Selecionar múltiplos</>}
             </Button>
           </div>
         </div>
