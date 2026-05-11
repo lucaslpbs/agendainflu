@@ -15,6 +15,14 @@ import { SkeletonDashboard } from "@/components/ui/SkeletonDashboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AdminLayout } from "./AdminLayout";
 
+const CHART_COLORS = {
+  primary: "hsl(340, 82%, 43%)",
+  accent: "hsl(43, 89%, 38%)",
+  success: "hsl(142, 71%, 45%)",
+  destructive: "hsl(0, 84%, 60%)",
+  muted: "hsl(30, 30%, 88%)",
+}
+
 const BarChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false })
 const Bar = dynamic<any>(() => import('recharts').then(m => ({ default: m.Bar })), { ssr: false })
 const XAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.XAxis })), { ssr: false })
@@ -63,10 +71,10 @@ export const AdminDashboard = () => {
   }, [bookings]);
 
   const statusColors: Record<string, string> = {
-    pendente: "hsl(var(--accent))",
-    confirmado: "hsl(142, 71%, 45%)",
-    concluido: "hsl(var(--primary))",
-    cancelado: "hsl(var(--destructive))",
+    pendente: CHART_COLORS.accent,
+    confirmado: CHART_COLORS.success,
+    concluido: CHART_COLORS.primary,
+    cancelado: CHART_COLORS.destructive,
   };
 
   const recentBookings = bookings.slice(0, 8);
@@ -129,41 +137,59 @@ export const AdminDashboard = () => {
                 <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></Button>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="bookings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Agendamentos" />
-                <Bar dataKey="receita" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Receita (R$)" />
-              </BarChart>
-            </ResponsiveContainer>
+            {dailyData.some(d => d.bookings > 0) ? (
+              <div style={{ width: '100%', height: 280 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="bookings" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} name="Agendamentos" />
+                    <Bar dataKey="receita" fill={CHART_COLORS.accent} radius={[4, 4, 0, 0]} name="Receita (R$)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+                Sem agendamentos neste mês
+              </div>
+            )}
           </div>
 
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="font-semibold mb-4">Status dos Agendamentos</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={4}>
-                  {statusData.map((entry) => (
-                    <Cell key={entry.name} fill={statusColors[entry.name] || "hsl(var(--muted))"} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 mt-2">
-              {statusData.map((s) => (
-                <div key={s.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusColors[s.name] || "hsl(var(--muted))" }} />
-                    <span className="capitalize">{s.name}</span>
-                  </div>
-                  <span className="font-medium">{s.value}</span>
+            {statusData.length > 0 ? (
+              <>
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={4}>
+                        {statusData.map((entry) => (
+                          <Cell key={entry.name} fill={statusColors[entry.name] || "hsl(var(--muted))"} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-2 mt-2">
+                  {statusData.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusColors[s.name] || "hsl(var(--muted))" }} />
+                        <span className="capitalize">{s.name}</span>
+                      </div>
+                      <span className="font-medium">{s.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                Sem dados ainda
+              </div>
+            )}
           </div>
         </div>
 

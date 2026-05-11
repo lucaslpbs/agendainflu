@@ -23,6 +23,14 @@ import { Button } from "@/components/ui/button";
 import { SkeletonDashboard } from "@/components/ui/SkeletonDashboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 
+const CHART_COLORS = {
+  primary: "hsl(340, 82%, 43%)",
+  accent: "hsl(43, 89%, 38%)",
+  success: "hsl(150, 60%, 40%)",
+  destructive: "hsl(0, 84%, 60%)",
+  muted: "hsl(30, 30%, 88%)",
+}
+
 const Dashboard = () => {
   const { influencer } = useAuth();
   const router = useRouter();
@@ -61,10 +69,10 @@ const Dashboard = () => {
   }, [allBookings]);
 
   const statusData = useMemo(() => [
-    { name: "Pendentes", value: allBookings.filter(b => b.status === "pendente").length, color: "hsl(var(--accent))" },
-    { name: "Confirmados", value: allBookings.filter(b => b.status === "confirmado").length, color: "hsl(var(--primary))" },
-    { name: "Concluídos", value: allBookings.filter(b => b.status === "concluido").length, color: "hsl(150, 60%, 40%)" },
-    { name: "Cancelados", value: allBookings.filter(b => b.status === "cancelado").length, color: "hsl(var(--destructive))" },
+    { name: "Pendentes", value: allBookings.filter(b => b.status === "pendente").length, color: CHART_COLORS.accent },
+    { name: "Confirmados", value: allBookings.filter(b => b.status === "confirmado").length, color: CHART_COLORS.primary },
+    { name: "Concluídos", value: allBookings.filter(b => b.status === "concluido").length, color: CHART_COLORS.success },
+    { name: "Cancelados", value: allBookings.filter(b => b.status === "cancelado").length, color: CHART_COLORS.destructive },
   ].filter(d => d.value > 0), [allBookings]);
 
   const dailyData = useMemo(() => {
@@ -161,17 +169,25 @@ const Dashboard = () => {
               <BarChart3 size={18} className="text-primary" />
               <h3 className="font-display font-semibold">Agendamentos por Mês</h3>
             </div>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                  formatter={(value: number) => [value, "Agendamentos"]}
-                />
-                <Bar dataKey="agendamentos" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {allBookings.length > 0 ? (
+              <div style={{ width: '100%', height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData}>
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                      formatter={(value: number) => [value, "Agendamentos"]}
+                    />
+                    <Bar dataKey="agendamentos" fill={CHART_COLORS.primary} radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-60 text-sm text-muted-foreground">
+                Nenhum agendamento ainda
+              </div>
+            )}
           </div>
 
           <div className="bg-card rounded-2xl border border-border p-6">
@@ -181,17 +197,19 @@ const Dashboard = () => {
             </div>
             {statusData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                      {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                      formatter={(value: number, name: string) => [value, name]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: 180 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
+                        {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                        formatter={(value: number, name: string) => [value, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
                 <div className="flex flex-wrap gap-3 mt-2 justify-center">
                   {statusData.map((d) => (
                     <span key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -237,29 +255,37 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dailyData}>
-              <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={1} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                formatter={(value: number, name: string) => {
-                  if (name === "receita") return [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Receita"];
-                  return [value, "Agendamentos"];
-                }}
-                labelFormatter={(label) => `Dia ${label}`}
-              />
-              <Bar dataKey="agendamentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="receita" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {dailyData.some(d => d.agendamentos > 0) ? (
+            <div style={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyData}>
+                  <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={1} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                    formatter={(value: number, name: string) => {
+                      if (name === "receita") return [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Receita"];
+                      return [value, "Agendamentos"];
+                    }}
+                    labelFormatter={(label: string) => `Dia ${label}`}
+                  />
+                  <Bar dataKey="agendamentos" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="receita" fill={CHART_COLORS.accent} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+              Sem agendamentos neste mês
+            </div>
+          )}
 
           <div className="flex gap-4 justify-center mt-3">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} /> Agendamentos
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS.primary }} /> Agendamentos
             </span>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(var(--accent))" }} /> Receita (R$)
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS.accent }} /> Receita (R$)
             </span>
           </div>
 
