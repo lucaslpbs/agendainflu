@@ -7,17 +7,17 @@ import { useBookings, useClients, useWaitlist } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { CalendarCheck, Users, Clock, ClipboardList, TrendingUp, DollarSign, BarChart3, ArrowUpRight, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval, isToday, addMonths } from "date-fns";
-import dynamic from 'next/dynamic'
-
-const BarChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false })
-const Bar = dynamic<any>(() => import('recharts').then(m => ({ default: m.Bar })), { ssr: false })
-const XAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.XAxis })), { ssr: false })
-const YAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.YAxis })), { ssr: false })
-const Tooltip = dynamic<any>(() => import('recharts').then(m => ({ default: m.Tooltip })), { ssr: false })
-const ResponsiveContainer = dynamic<any>(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })), { ssr: false })
-const PieChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.PieChart })), { ssr: false })
-const Pie = dynamic<any>(() => import('recharts').then(m => ({ default: m.Pie })), { ssr: false })
-const Cell = dynamic<any>(() => import('recharts').then(m => ({ default: m.Cell })), { ssr: false })
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { SkeletonDashboard } from "@/components/ui/SkeletonDashboard";
