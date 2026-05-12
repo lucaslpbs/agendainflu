@@ -10,7 +10,18 @@ import {
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import dynamic from 'next/dynamic';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { SkeletonDashboard } from "@/components/ui/SkeletonDashboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AdminLayout } from "./AdminLayout";
@@ -22,17 +33,6 @@ const CHART_COLORS = {
   destructive: "hsl(0, 84%, 60%)",
   muted: "hsl(30, 30%, 88%)",
 }
-
-const BarChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false })
-const Bar = dynamic<any>(() => import('recharts').then(m => ({ default: m.Bar })), { ssr: false })
-const XAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.XAxis })), { ssr: false })
-const YAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.YAxis })), { ssr: false })
-const CartesianGrid = dynamic<any>(() => import('recharts').then(m => ({ default: m.CartesianGrid })), { ssr: false })
-const Tooltip = dynamic<any>(() => import('recharts').then(m => ({ default: m.Tooltip })), { ssr: false })
-const ResponsiveContainer = dynamic<any>(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })), { ssr: false })
-const PieChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.PieChart })), { ssr: false })
-const Pie = dynamic<any>(() => import('recharts').then(m => ({ default: m.Pie })), { ssr: false })
-const Cell = dynamic<any>(() => import('recharts').then(m => ({ default: m.Cell })), { ssr: false })
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState({ influencers: 0, emAnalise: 0, bookings: 0, clients: 0, waitlist: 0, receita: 0 });
