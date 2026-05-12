@@ -110,6 +110,22 @@ const AgendarServico = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'heic', 'heif'];
+
+    const invalidFiles = files.filter(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const isMimeOk = ALLOWED_TYPES.includes(file.type);
+      const isExtOk = ALLOWED_EXTENSIONS.includes(ext);
+      return !isMimeOk && !isExtOk;
+    });
+
+    if (invalidFiles.length > 0) {
+      toast.error(`Formato inválido: ${invalidFiles.map(f => f.name).join(', ')}. Use apenas JPG, PNG ou HEIC.`);
+      return;
+    }
+
     if (kitMidiaFiles.length + files.length > 5) {
       toast.error("Máximo de 5 arquivos");
       return;
@@ -411,7 +427,7 @@ const AgendarServico = () => {
                     <label className="flex items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 cursor-pointer transition-colors bg-secondary/30">
                       <Upload size={18} className="text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Clique para adicionar fotos</span>
-                      <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleFileSelect} />
+                      <input type="file" accept=".jpg,.jpeg,.png,.heic,.heif,image/jpeg,image/png,image/heic,image/heif" multiple className="hidden" onChange={handleFileSelect} />
                     </label>
                   )}
                 </div>
