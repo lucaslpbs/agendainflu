@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { verifyJWT, type JWTPayload } from './jwt'
+import { db } from './db'
 
 export async function getAuthUser(req: NextRequest): Promise<JWTPayload | null> {
   try {
@@ -22,6 +23,18 @@ export async function requireAuth(req: NextRequest): Promise<JWTPayload> {
 export async function requireInfluencer(req: NextRequest): Promise<JWTPayload> {
   const user = await requireAuth(req)
   if (user.role !== 'influencer' && user.role !== 'admin') throw new Error('FORBIDDEN')
+
+  if (!user.influencer_id) {
+    const { data: inf } = await db
+      .from('influencers')
+      .select('id')
+      .eq('user_id', user.user_id)
+      .maybeSingle()
+    if (inf?.id) {
+      user.influencer_id = inf.id
+    }
+  }
+
   return user
 }
 

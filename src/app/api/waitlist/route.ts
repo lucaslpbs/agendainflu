@@ -3,15 +3,25 @@ import { db } from '@/lib/db'
 import { requireInfluencer, getAuthUser } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
+import { createWaitlistSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
+import { parsePagination, paginatedResult } from '@/lib/pagination'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'waitlist', limit: 5, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const body = await req.json()
-    const { influencer_id, nome, whatsapp, email, empresa, mensagem } = body
-
-    if (!nome || !whatsapp) {
-      return NextResponse.json({ error: 'nome e whatsapp sao obrigatorios' }, { status: 400 })
+    const parsed = createWaitlistSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+
+    const { influencer_id, nome, whatsapp, email, empresa, mensagem } = parsed.data
 
     // Verificar se ja e cliente ativo
     if (influencer_id) {
@@ -65,11 +75,19 @@ export async function POST(req: NextRequest) {
       if (inf) {
         infNome = inf.nome
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-        await sendWhatsApp(inf.whatsapp || '', 'Nova entrada na lista de espera! Nome: ' + nome + ' | Empresa: ' + (empresa || '-') + ' | WA: ' + whatsapp + ' | ' + appUrl + '/painel/lista-espera')
+        try {
+          await sendWhatsApp(inf.whatsapp || '', 'Nova entrada na lista de espera! Nome: ' + nome + ' | Empresa: ' + (empresa || '-') + ' | WA: ' + whatsapp + ' | ' + appUrl + '/painel/lista-espera')
+        } catch (waErr) {
+          console.error('WhatsApp notification failed (waitlist notify influencer):', waErr)
+        }
       }
     }
 
-    await sendWhatsApp(whatsapp, 'Ola, ' + nome + '! Recebemos seu interesse em divulgar com ' + infNome + '. Voce entrou na lista de espera e sera contatado(a) em breve.')
+    try {
+      await sendWhatsApp(whatsapp, 'Ola, ' + nome + '! Recebemos seu interesse em divulgar com ' + infNome + '. Voce entrou na lista de espera e sera contatado(a) em breve.')
+    } catch (waErr) {
+      console.error('WhatsApp notification failed (waitlist confirmation):', waErr)
+    }
 
     return NextResponse.json({ message: 'Solicitacao recebida!' }, { status: 201 })
   } catch (e) {
@@ -85,17 +103,30 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
 
-    let query = db
+    const pagination = parsePagination(req, { sort: 'criado_em', order: 'desc' })
+    const offset = (pagination.page - 1) * pagination.limit
+
+    let countQuery = db
+      .from('waitlist')
+      .select('id', { count: 'exact', head: true })
+      .eq('influencer_id', auth.influencer_id)
+
+    let dataQuery = db
       .from('waitlist')
       .select('*')
       .eq('influencer_id', auth.influencer_id)
-      .order('criado_em', { ascending: false })
+      .order(pagination.sort || 'criado_em', { ascending: pagination.order === 'asc' })
+      .range(offset, offset + pagination.limit - 1)
 
-    if (status) query = query.eq('status', status as any)
+    if (status) {
+      countQuery = countQuery.eq('status', status as any)
+      dataQuery = dataQuery.eq('status', status as any)
+    }
 
-    const { data, error } = await query
-    if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    const [countRes, dataRes] = await Promise.all([countQuery, dataQuery])
+    if (dataRes.error) throw dataRes.error
+
+    return NextResponse.json(paginatedResult(dataRes.data || [], countRes.count || 0, pagination))
   } catch (e) {
     return apiError(e)
   }

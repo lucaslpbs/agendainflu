@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Check, X, MessageCircle, Instagram, ExternalLink, Image, FileText, Send, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -12,18 +12,13 @@ import type { Tables } from "@/integrations/supabase/types";
 type BookingWithRelations = Tables<"bookings"> & {
   clients: Tables<"clients"> | null;
   services: Tables<"services"> | null;
+  pagamento_confirmado?: boolean | null;
 };
 
 const serviceLabels: Record<string, string> = {
   stories: "Stories", reels: "Reels", reels_stories: "Reels + Stories", feed: "Feed", presencial: "Presencial",
 };
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  pendente: { label: "Pendente", className: "bg-accent/20 text-accent border-accent/30" },
-  confirmado: { label: "Confirmado", className: "bg-primary/20 text-primary border-primary/30" },
-  concluido: { label: "Concluído", className: "bg-green-100 text-green-700 border-green-300" },
-  cancelado: { label: "Cancelado", className: "bg-destructive/20 text-destructive border-destructive/30" },
-};
 
 interface Props {
   booking: BookingWithRelations | null;
@@ -41,7 +36,6 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
   if (!booking) return null;
 
   const b = booking;
-  const status = statusConfig[b.status] || statusConfig.pendente;
 
   const handleSendWhatsApp = async () => {
     setSending(true);
@@ -105,9 +99,7 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
         <div className="space-y-5">
           {/* Status */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${status.className}`}>
-              {status.label}
-            </span>
+            <StatusBadge status={b.status} />
             {b.pagamento_confirmado && (
               <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 border border-green-300">
                 💰 Pago

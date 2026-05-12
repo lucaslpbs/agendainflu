@@ -50,7 +50,7 @@ Rodapé do site com logo, links de navegação (Para Empresas, Para Influenciado
 
 ### Estado atual
 - Links sociais apontam para `#` (placeholders)
-- Copyright com ano fixo "2025" — **desatualizado** (correto é 2026)
+- Copyright usa `new Date().getFullYear()` (dinâmico)
 - Usa `next/link` para navegação interna
 
 ### O que ainda não está implementado

@@ -6,18 +6,25 @@ import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Unlock, CalendarCheck, X, CheckSquare, Square } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
 import type { BookingWithRelations } from "@/hooks/usePanelData";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const CalendarioPage = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingSlots, setEditingSlots] = useState<number>(1);
   const [detailBooking, setDetailBooking] = useState<BookingWithRelations | null>(null);
+
+  const [multiMode, setMultiMode] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [multiSlots, setMultiSlots] = useState(1);
+  const [multiBlocked, setMultiBlocked] = useState(false);
+  const [savingMulti, setSavingMulti] = useState(false);
 
   const { data, isLoading } = useCalendario(currentMonth);
   const availability = data?.availability ?? [];
@@ -69,6 +76,40 @@ const CalendarioPage = () => {
     setEditingSlots(av?.slots_disponiveis || 1);
   };
 
+  const toggleMultiDate = (dateStr: string) => {
+    setSelectedDates(prev =>
+      prev.includes(dateStr)
+        ? prev.filter(d => d !== dateStr)
+        : [...prev, dateStr]
+    );
+  };
+
+  const saveMultiDays = async () => {
+    if (selectedDates.length === 0) {
+      toast.error("Selecione pelo menos um dia");
+      return;
+    }
+    setSavingMulti(true);
+    try {
+      await Promise.all(
+        selectedDates.map(date =>
+          saveAvailability.mutateAsync({
+            data: date,
+            bloqueado: multiBlocked,
+            slots_disponiveis: multiSlots,
+          })
+        )
+      );
+      toast.success(`${selectedDates.length} dia(s) atualizado(s) com sucesso!`);
+      setSelectedDates([]);
+      setMultiMode(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingMulti(false);
+    }
+  };
+
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
   const startDay = startOfMonth(currentMonth).getDay();
 
@@ -97,15 +138,6 @@ const CalendarioPage = () => {
   const selectedBookings = selectedDate ? bookings.filter((b) => b.data_agendada === selectedDate) : [];
   const selectedAv = selectedDate ? availability.find((a) => a.data === selectedDate) : null;
 
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pendente: "bg-accent/20 text-accent",
-      confirmado: "bg-primary/20 text-primary",
-      concluido: "bg-green-100 text-green-700",
-      cancelado: "bg-destructive/20 text-destructive",
-    };
-    return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{status}</span>;
-  };
 
   return (
     <PanelLayout>
@@ -113,14 +145,27 @@ const CalendarioPage = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold font-display">Calendário</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-              <ChevronLeft size={18} />
-            </Button>
-            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </span>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-              <ChevronRight size={18} />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                <ChevronLeft size={18} />
+              </Button>
+              <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+                {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                <ChevronRight size={18} />
+              </Button>
+            </div>
+            <Button
+              variant={multiMode ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                setMultiMode(!multiMode);
+                setSelectedDates([]);
+              }}
+            >
+              {multiMode ? <><X size={14} /> Cancelar seleção</> : <><CheckSquare size={14} /> Selecionar múltiplos</>}
             </Button>
           </div>
         </div>
@@ -217,7 +262,7 @@ const CalendarioPage = () => {
                         <div key={b.id} className="p-3 rounded-xl bg-secondary/50 border border-border cursor-pointer hover:bg-secondary/80 transition-colors" onClick={() => setDetailBooking(b)}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-sm">{b.clients?.nome || "Cliente"}</span>
-                            {statusBadge(b.status)}
+                            <StatusBadge status={b.status} />
                           </div>
                           <p className="text-xs text-muted-foreground">{b.services?.tipo}</p>
                           {b.descricao_produto && <p className="text-xs text-muted-foreground mt-1">{b.descricao_produto}</p>}

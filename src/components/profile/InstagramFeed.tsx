@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Instagram, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Image from 'next/image'
 
 interface InstagramPost {
   id: string
@@ -36,7 +38,7 @@ const InstagramFeed = ({ influencerId, instagramUrl, instagramHandle }: Instagra
         setPosts(data.posts ?? [])
         setConnected(data.connected ?? false)
       })
-      .catch(() => {})
+      .catch(() => { toast.error('Erro ao carregar feed do Instagram') })
       .finally(() => setLoading(false))
   }, [influencerId])
 
@@ -85,11 +87,11 @@ const InstagramFeed = ({ influencerId, instagramUrl, instagramHandle }: Instagra
               rel="noopener noreferrer"
               className="group relative aspect-square rounded-xl overflow-hidden bg-muted"
             >
-              <img
-                src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+              <Image
+                src={post.media_type === 'VIDEO' ? (post.thumbnail_url ?? '') : (post.media_url ?? '')}
                 alt={post.caption?.slice(0, 80) || 'Post do Instagram'}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                 <ExternalLink size={20} className="text-background" />

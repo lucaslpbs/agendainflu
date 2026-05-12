@@ -7,15 +7,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
 import { sendWhatsApp } from '@/lib/wa'
+import { registerInfluencerSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-register', limit: 3, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const body = await req.json()
-    const { user_id, nome, username: rawUsername, whatsapp, bio, nicho, seguidores, instagram, foto_url, email } = body
-
-    if (!user_id || !nome || !whatsapp) {
-      return NextResponse.json({ error: 'user_id, nome e whatsapp são obrigatórios' }, { status: 400 })
+    const parsed = registerInfluencerSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+    const { user_id, nome, username: rawUsername, whatsapp, bio, nicho, seguidores, instagram, foto_url, email } = parsed.data
 
     // Sanitizar username
     const username = (rawUsername || nome)
@@ -59,10 +67,14 @@ export async function POST(req: NextRequest) {
 
     // Notificar admin via WhatsApp
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    await sendWhatsApp(
-      process.env.NEXT_PUBLIC_SUPPORT_WA || '',
-      `🔔 Nova influenciadora cadastrada!\nNome: ${nome}\nUsername: @${username}\nWhatsApp: ${whatsapp}\nAcesse: ${appUrl}/admin/influenciadoras`
-    )
+    try {
+      await sendWhatsApp(
+        process.env.NEXT_PUBLIC_SUPPORT_WA || '',
+        `🔔 Nova influenciadora cadastrada!\nNome: ${nome}\nUsername: @${username}\nWhatsApp: ${whatsapp}\nAcesse: ${appUrl}/admin/influenciadoras`
+      )
+    } catch (waErr) {
+      console.error('WhatsApp notification failed (register influencer):', waErr)
+    }
 
     return NextResponse.json(
       { message: 'Cadastro recebido! Aguarde análise da equipe.', influencer_id: inf.id },

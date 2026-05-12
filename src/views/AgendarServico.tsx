@@ -42,6 +42,8 @@ const AgendarServico = () => {
   const [observacoes, setObservacoes] = useState("");
   const [kitMidiaFiles, setKitMidiaFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [availability, setAvailability] = useState<Record<string, { disponivel: boolean; bloqueado: boolean; slots_disponiveis: number; slots_ocupados: number }>>({});
+  const [loadingDates, setLoadingDates] = useState(false);
 
   useEffect(() => {
     if (!user) { router.push("/login"); return; }
@@ -74,11 +76,34 @@ const AgendarServico = () => {
     fetchAll();
   }, [username, user]);
 
-  // Generate next 14 available dates
-  const availableDates = Array.from({ length: 14 }, (_, i) => {
-    const d = addDays(new Date(), i + 2); // starts 2 days from now
-    return format(d, "yyyy-MM-dd");
-  });
+  useEffect(() => {
+    if (!influencer) return;
+    const fetchAvailability = async () => {
+      setLoadingDates(true);
+      try {
+        const res = await fetch(`/api/influencers/${influencer.username}/availability?days=30`);
+        const json = await res.json();
+        const map: Record<string, any> = {};
+        for (const d of (json.data || [])) {
+          map[d.data] = d;
+        }
+        setAvailability(map);
+      } catch {
+        // fallback: todas as datas disponíveis
+      } finally {
+        setLoadingDates(false);
+      }
+    };
+    fetchAvailability();
+  }, [influencer]);
+
+  const availableDates = Array.from({ length: 30 }, (_, i) => {
+    return format(addDays(new Date(), i + 2), "yyyy-MM-dd");
+  }).filter(date => {
+    const av = availability[date];
+    if (!av) return true;
+    return av.disponivel && !av.bloqueado;
+  }).slice(0, 14);
 
   const chosenService = services.find(s => s.id === selectedService);
   const isOnlineService = chosenService && chosenService.formato === "online";
@@ -315,23 +340,38 @@ const AgendarServico = () => {
             {/* Date selection */}
             <div>
               <label className="text-sm font-medium mb-3 block">Escolha a data *</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {availableDates.map((d) => (
-                  <button type="button" key={d}
-                    onClick={() => setSelectedDate(d)}
-                    className={`p-3 rounded-lg border text-center transition-all text-sm ${
-                      selectedDate === d
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20 font-bold"
-                        : "border-border hover:border-primary/30"
-                    }`}>
-                    {format(parseISO(d), "dd/MM", { locale: ptBR })}
-                    <br />
-                    <span className="text-xs text-muted-foreground">
-                      {format(parseISO(d), "EEE", { locale: ptBR })}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {loadingDates ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-16 rounded-lg bg-secondary animate-pulse" />
+                  ))}
+                </div>
+              ) : availableDates.length === 0 ? (
+                <div className="bg-secondary/50 rounded-xl p-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma data disponível nos próximos 30 dias.
+                    Entre em contato pelo WhatsApp.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {availableDates.map((d) => (
+                    <button type="button" key={d}
+                      onClick={() => setSelectedDate(d)}
+                      className={`p-3 rounded-lg border text-center transition-all text-sm ${
+                        selectedDate === d
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20 font-bold"
+                          : "border-border hover:border-primary/30"
+                      }`}>
+                      {format(parseISO(d), "dd/MM", { locale: ptBR })}
+                      <br />
+                      <span className="text-xs text-muted-foreground">
+                        {format(parseISO(d), "EEE", { locale: ptBR })}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Details */}

@@ -1,5 +1,3 @@
-'use client'
-
 import { ProtectedLayout } from '@/components/ProtectedLayout'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

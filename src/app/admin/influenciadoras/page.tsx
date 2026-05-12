@@ -1,4 +1,4 @@
-import { AdminInfluenciadoras } from '@/views/admin/AdminPages'
+import { AdminInfluenciadoras } from '@/views/admin/AdminInfluenciadoras'
 
 export default function AdminInfluenciadorasPage() {
   return <AdminInfluenciadoras />

@@ -282,8 +282,16 @@ export type Database = {
           cover_url: string | null
           created_at: string
           foto_url: string | null
+          fotos: string[] | null
           id: string
           instagram: string | null
+          instagram_access_token: string | null
+          instagram_connected: boolean
+          instagram_followers_count: number | null
+          instagram_followers_updated_at: string | null
+          instagram_token_expires_at: string | null
+          instagram_user_id: string | null
+          instagram_username: string | null
           marcas_parceiras: number | null
           nicho: string | null
           nome: string
@@ -304,8 +312,16 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           foto_url?: string | null
+          fotos?: string[] | null
           id?: string
           instagram?: string | null
+          instagram_access_token?: string | null
+          instagram_connected?: boolean
+          instagram_followers_count?: number | null
+          instagram_followers_updated_at?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           marcas_parceiras?: number | null
           nicho?: string | null
           nome: string
@@ -326,8 +342,16 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           foto_url?: string | null
+          fotos?: string[] | null
           id?: string
           instagram?: string | null
+          instagram_access_token?: string | null
+          instagram_connected?: boolean
+          instagram_followers_count?: number | null
+          instagram_followers_updated_at?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           marcas_parceiras?: number | null
           nicho?: string | null
           nome?: string
@@ -476,6 +500,53 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          id: string
+          booking_id: string
+          client_id: string
+          influencer_id: string
+          rating: number
+          texto: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          client_id: string
+          influencer_id: string
+          rating: number
+          texto?: string | null
+          criado_em?: string
+        }
+        Update: {
+          rating?: number
+          texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist: {
         Row: {
           atualizado_em: string
@@ -531,7 +602,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      upsert_booking_client: {
+        Args: {
+          p_influencer_id: string
+          p_user_id: string
+          p_nome: string
+          p_whatsapp: string
+          p_email: string
+          p_empresa?: string | null
+          p_status?: string
+          p_origem?: string
+        }
+        Returns: Json
+      }
+      create_booking_atomic: {
+        Args: {
+          p_influencer_id: string
+          p_client_id: string
+          p_service_id: string
+          p_data_agendada: string
+          p_codigo_confirmacao: string
+          p_descricao_produto?: string | null
+          p_link_negocio?: string | null
+          p_material_url?: string[] | null
+          p_observacoes?: string | null
+          p_status?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       booking_status: "pendente" | "confirmado" | "concluido" | "cancelado"

@@ -6,27 +6,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
+import { registerClientSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-register', limit: 3, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
     const body = await req.json()
-    const {
-      user_id, tipo_pessoa, nome, email, whatsapp,
-      cnpj, razao_social, cpf, endereco,
-    } = body
-
-    if (!user_id || !nome || !whatsapp || !tipo_pessoa) {
+    const parsed = registerClientSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'user_id, nome, whatsapp e tipo_pessoa são obrigatórios' },
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
         { status: 400 }
       )
     }
-    if (tipo_pessoa === 'pj' && (!cnpj || !razao_social)) {
-      return NextResponse.json({ error: 'Pessoa Jurídica requer cnpj e razao_social' }, { status: 400 })
-    }
-    if (tipo_pessoa === 'pf' && !cpf) {
-      return NextResponse.json({ error: 'Pessoa Física requer cpf' }, { status: 400 })
-    }
+    const {
+      user_id, tipo_pessoa, nome, email, whatsapp,
+      cnpj, razao_social, cpf, endereco,
+    } = parsed.data
 
     // [FIX P2] Criar client_profile com tipos corretos (sem as any)
     const { error: profileError } = await db

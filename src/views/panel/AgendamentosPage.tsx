@@ -10,8 +10,10 @@ import { Check, X, MessageCircle, Calendar } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
-import BookingDetailDialog from "@/components/panel/BookingDetailDialog";
+import dynamic from 'next/dynamic'
+const BookingDetailDialog = dynamic(() => import('@/components/panel/BookingDetailDialog'), { ssr: false })
 import type { BookingWithRelations } from "@/hooks/usePanelData";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const AgendamentosPage = () => {
   const { influencer } = useAuth();
@@ -35,16 +37,6 @@ const AgendamentosPage = () => {
     if (isToday(d)) return "Hoje";
     if (isTomorrow(d)) return "Amanhã";
     return format(d, "dd 'de' MMM", { locale: ptBR });
-  };
-
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pendente: "bg-accent/20 text-accent",
-      confirmado: "bg-primary/20 text-primary",
-      concluido: "bg-green-100 text-green-700",
-      cancelado: "bg-destructive/20 text-destructive",
-    };
-    return <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${styles[status] || "bg-secondary"}`}>{status}</span>;
   };
 
   return (
@@ -95,7 +87,7 @@ const AgendamentosPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <p className="font-bold text-primary text-sm">R$ {Number(b.services?.preco || 0).toFixed(2)}</p>
-                      {statusBadge(b.status)}
+                      <StatusBadge status={b.status} />
                       {b.status === "pendente" && (
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700" onClick={() => handleUpdateStatus(b.id, "confirmado")} title="Confirmar">

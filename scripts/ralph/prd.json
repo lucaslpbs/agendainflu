@@ -1,0 +1,774 @@
+{
+  "project": "AgendaInflu v2",
+  "branchName": "ralph/agendainflu-v2",
+  "description": "Transform the functional MVP into a professional-quality SaaS — secure, performant, tested, responsive, with premium marketplace-first visual identity",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Remove secrets and secure env config",
+      "description": "As a developer, I need to ensure no secrets are exposed in the repository and env vars are properly configured.",
+      "acceptanceCriteria": [
+        "`.env.local` is in `.gitignore`",
+        "`.env.example` exists with placeholder values for all required env vars",
+        "N8N webhook URL in `/api/bookings/notify-whatsapp/route.ts` uses `process.env.N8N_WEBHOOK_URL` instead of hardcoded URL",
+        "In `src/lib/db.ts`: fallback to ANON_KEY is removed; throws error if SUPABASE_SERVICE_ROLE_KEY is missing in production",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Covers US-SEC-001, US-SEC-008, US-SEC-010 from PRD. Does NOT do git history rewrite (requires manual intervention)."
+    },
+    {
+      "id": "US-002",
+      "title": "Update copyright to 2026",
+      "description": "As a user, I want to see the correct copyright year on the site.",
+      "acceptanceCriteria": [
+        "Footer.tsx shows copyright 2026",
+        "No other files contain hardcoded 2025 copyright",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Covers US-PEND-005."
+    },
+    {
+      "id": "US-003",
+      "title": "Add HTTP security headers",
+      "description": "As a security engineer, I need proper security headers on all responses.",
+      "acceptanceCriteria": [
+        "`next.config.mjs` has `headers()` config returning: X-Frame-Options DENY, X-Content-Type-Options nosniff, Strict-Transport-Security, X-XSS-Protection, Referrer-Policy strict-origin-when-cross-origin, Content-Security-Policy",
+        "CSP allows self, supabase domains, and image sources used by the app",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Covers US-SEC-003."
+    },
+    {
+      "id": "US-004",
+      "title": "Fix cookie security and Instagram OAuth validation",
+      "description": "As a security engineer, I need secure cookie flags and validated OAuth state.",
+      "acceptanceCriteria": [
+        "In `src/app/api/auth/exchange/route.ts`: sameSite changed from 'lax' to 'strict'",
+        "In `src/app/api/auth/instagram/callback/route.ts`: validate that `state` is a valid UUID before using in database query",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Covers US-SEC-006 and US-SEC-011."
+    },
+    {
+      "id": "US-005",
+      "title": "Configure RLS policies for all tables",
+      "description": "As a security engineer, I need Row Level Security enforced on all Supabase tables.",
+      "acceptanceCriteria": [
+        "New migration file created in `supabase/migrations/`",
+        "RLS policy: clients can SELECT their own records via `user_id = auth.uid()`",
+        "RLS policy: clients can SELECT their own bookings via client_id relationship",
+        "RLS policy: influencers can SELECT their own bookings",
+        "DELETE policies added for: influencers, services, availability, client_profiles",
+        "All policies use `IF NOT EXISTS` or `CREATE OR REPLACE` to be idempotent",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Covers US-SEC-002."
+    },
+    {
+      "id": "US-006",
+      "title": "Create centralized Zod schemas",
+      "description": "As a developer, I need centralized validation schemas for all data types.",
+      "acceptanceCriteria": [
+        "Created `src/lib/schemas/booking.schema.ts` with schema validating ISO date, UUIDs",
+        "Created `src/lib/schemas/auth.schema.ts` with schema validating email, password, registration fields",
+        "Created `src/lib/schemas/service.schema.ts` with schema validating type enum, price > 0, max_por_dia >= 1",
+        "Created `src/lib/schemas/client.schema.ts` with schema validating WhatsApp format, email",
+        "Created `src/lib/schemas/waitlist.schema.ts` with required fields validation",
+        "Created `src/lib/schemas/status.schema.ts` with allowed status transition enums",
+        "Created `src/lib/schemas/index.ts` barrel export",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Covers first part of US-SEC-005. Schemas only, no endpoint changes yet."
+    },
+    {
+      "id": "US-007",
+      "title": "Apply Zod validation to auth endpoints",
+      "description": "As a developer, I need all auth API routes to validate input with Zod.",
+      "acceptanceCriteria": [
+        "`/api/auth/exchange/route.ts` validates request body with Zod schema",
+        "`/api/auth/register/influencer/route.ts` validates request body with Zod schema",
+        "`/api/auth/register/client/route.ts` validates request body with Zod schema (if exists)",
+        "Invalid requests return 400 with descriptive error message",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Depends on US-006."
+    },
+    {
+      "id": "US-008",
+      "title": "Apply Zod validation to booking, service, and remaining endpoints",
+      "description": "As a developer, I need all mutation API routes to validate input with Zod.",
+      "acceptanceCriteria": [
+        "`/api/bookings/route.ts` POST validates with booking schema",
+        "`/api/services/route.ts` POST validates with service schema; `parseInt(max_por_dia)` replaced with Zod coercion",
+        "`/api/admin/bookings/route.ts` validates status against allowed enum",
+        "`/api/admin/waitlist/route.ts` validates status against allowed enum",
+        "`/api/clients/[id]/status/route.ts` validates status against allowed enum",
+        "`/api/waitlist/route.ts` POST validates with waitlist schema",
+        "Invalid requests return 400 with descriptive error message",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Depends on US-006. Covers remaining parts of US-SEC-005."
+    },
+    {
+      "id": "US-009",
+      "title": "Add rate limiting to critical endpoints",
+      "description": "As a security engineer, I need rate limiting on auth and mutation endpoints.",
+      "acceptanceCriteria": [
+        "Rate limiter utility created (in-memory or @upstash/ratelimit)",
+        "`/api/auth/*` limited to 10 req/min per IP",
+        "`/api/bookings` POST limited to 5 req/min per user",
+        "`/api/waitlist` POST limited to 5 req/min per IP",
+        "`/api/auth/register/*` limited to 3 req/min per IP",
+        "Rate-limited requests return 429 with `Retry-After` header",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Covers US-SEC-004."
+    },
+    {
+      "id": "US-010",
+      "title": "Add CSRF protection and CORS config",
+      "description": "As a security engineer, I need CORS properly configured and timing-safe secret comparison.",
+      "acceptanceCriteria": [
+        "CORS configured in `next.config.mjs` allowing only production domain",
+        "CRON_SECRET comparison in `src/app/api/cron/update-followers/route.ts` uses timing-safe comparison (crypto.timingSafeEqual)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Covers US-SEC-009. CSRF tokens deferred to avoid scope creep."
+    },
+    {
+      "id": "US-011",
+      "title": "Create database indexes for performance",
+      "description": "As a developer, I need proper database indexes for query performance.",
+      "acceptanceCriteria": [
+        "New migration created with indexes on: clients(influencer_id), clients(whatsapp, influencer_id), bookings(influencer_id), bookings(client_id), bookings(service_id), bookings(data_agendada), bookings(status), bookings(influencer_id, data_agendada), services(influencer_id), services(ativo), availability(influencer_id, data), influencers(status), waitlist(influencer_id), waitlist(status), user_roles(user_id)",
+        "UNIQUE constraint added: clients(influencer_id, whatsapp)",
+        "All CREATE INDEX use IF NOT EXISTS",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Covers US-PERF-001."
+    },
+    {
+      "id": "US-012",
+      "title": "Fix race conditions in booking creation",
+      "description": "As a developer, I need to fix race conditions that cause duplicate clients and overbooking.",
+      "acceptanceCriteria": [
+        "In `/api/bookings/route.ts`: client lookup and creation uses upsert or single atomic query instead of check-then-create",
+        "Availability check and booking insert use a transaction or atomic operation to prevent overbooking",
+        "Service and influencer lookups combined where possible to reduce queries",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Covers BUG-002, BUG-003, US-PERF-003."
+    },
+    {
+      "id": "US-013",
+      "title": "Fix max_por_dia not being used in availability calculation",
+      "description": "As a developer, I need the service's daily limit to be respected in availability.",
+      "acceptanceCriteria": [
+        "In `/api/influencers/[slug]/availability/route.ts`: `max_por_dia` from services is used in calculating available slots",
+        "When bookings for a day reach max_por_dia, the day shows as unavailable",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Covers BUG-004."
+    },
+    {
+      "id": "US-014",
+      "title": "Fix date calculation in availability endpoint",
+      "description": "As a developer, I need correct date calculations in the availability API.",
+      "acceptanceCriteria": [
+        "In `/api/availability/route.ts`: month parameter is validated as 1-12",
+        "Date calculation for last day of month is correct and well-documented",
+        "Year and month params validated with Zod or explicit checks",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Covers BUG-001."
+    },
+    {
+      "id": "US-015",
+      "title": "Add try-catch to all sendWhatsApp calls",
+      "description": "As a developer, I need WhatsApp notification failures to not break the main operation.",
+      "acceptanceCriteria": [
+        "All 5 `sendWhatsApp()` calls wrapped in try-catch: bookings/route.ts, bookings/[id]/status/route.ts, auth/register/influencer/route.ts, admin/influencers/[id]/approve/route.ts, admin/influencers/[id]/reject/route.ts",
+        "Errors are logged with console.error but do not fail the request",
+        "Main operation (booking creation, approval, etc.) still succeeds even if WhatsApp fails",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Covers SEC-AUDIT-001."
+    },
+    {
+      "id": "US-016",
+      "title": "Make booking code unpredictable",
+      "description": "As a security engineer, I need booking codes that cannot be enumerated.",
+      "acceptanceCriteria": [
+        "In `src/lib/booking-code.ts`: booking code uses random characters (e.g., crypto.randomUUID slice) instead of sequential numbering",
+        "Format is still human-readable (e.g., AI-XXXXXXXX)",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Covers SEC-AUDIT-002."
+    },
+    {
+      "id": "US-017",
+      "title": "Add timeouts to all external API calls",
+      "description": "As a developer, I need external HTTP calls to have timeouts so they don't hang indefinitely.",
+      "acceptanceCriteria": [
+        "All fetch calls in `auth/instagram/callback/route.ts` use AbortController with 10s timeout",
+        "All fetch calls in `instagram/feed/route.ts` use AbortController with 10s timeout",
+        "All fetch calls in `cron/update-followers/route.ts` use AbortController with 10s timeout",
+        "Timeout errors are caught and return appropriate error response",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Covers DB-004."
+    },
+    {
+      "id": "US-018",
+      "title": "Migrate material_url to TEXT array",
+      "description": "As a developer, I need material_url to support multiple URLs as a proper array.",
+      "acceptanceCriteria": [
+        "New migration: ALTER TABLE bookings ALTER COLUMN material_url TYPE TEXT[] USING string_to_array(material_url, ',')",
+        "API route `/api/bookings/route.ts` updated to handle array",
+        "Frontend `AgendarServico.tsx` updated to handle array",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Covers US-PEND-004."
+    },
+    {
+      "id": "US-019",
+      "title": "Create pagination helper and apply to admin endpoints",
+      "description": "As a developer, I need a reusable pagination helper applied to admin API routes.",
+      "acceptanceCriteria": [
+        "Created `src/lib/pagination.ts` with helper accepting page, limit (default 20, max 100), sort, order params",
+        "Helper returns `{ data, total, page, totalPages, hasNext }` shape",
+        "`/api/admin/dashboard` uses pagination instead of `.limit(200)`",
+        "`/api/admin/bookings` uses pagination",
+        "`/api/admin/clients` uses pagination",
+        "`/api/admin/influencers` uses pagination",
+        "`/api/admin/waitlist` uses pagination",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Covers first part of US-PERF-002."
+    },
+    {
+      "id": "US-020",
+      "title": "Apply pagination to remaining endpoints and add frontend component",
+      "description": "As a user, I want paginated lists throughout the app with navigation controls.",
+      "acceptanceCriteria": [
+        "`/api/bookings` GET uses pagination helper",
+        "`/api/bookings/client` GET uses pagination helper",
+        "`/api/clients` GET uses pagination helper",
+        "`/api/waitlist` GET uses pagination helper",
+        "Reusable pagination UI component created (Next/Prev buttons with page info)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "Covers second part of US-PERF-002."
+    },
+    {
+      "id": "US-021",
+      "title": "Optimize images with next/image",
+      "description": "As a developer, I need all images to use next/image for performance.",
+      "acceptanceCriteria": [
+        "All `<img>` tags in FeaturedInfluencers.tsx replaced with next/image `<Image>`",
+        "All `<img>` tags in InfluencerProfile.tsx replaced with `<Image>`",
+        "All `<img>` tags in InstagramFeed.tsx replaced with `<Image>`",
+        "`next.config.mjs` remotePatterns updated to include all needed domains (unsplash, supabase storage, etc.)",
+        "Above-the-fold images have `priority` prop",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "Covers US-PERF-004."
+    },
+    {
+      "id": "US-022",
+      "title": "Add code splitting with dynamic imports",
+      "description": "As a developer, I need heavy components lazy-loaded to reduce initial bundle size.",
+      "acceptanceCriteria": [
+        "Recharts components in Dashboard/Admin loaded via `dynamic()` with ssr: false",
+        "BookingDetailDialog loaded via `dynamic()`",
+        "InstagramFeed loaded via `dynamic()`",
+        "lucide-react icons imported individually (not from barrel export)",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "Covers US-PERF-005."
+    },
+    {
+      "id": "US-023",
+      "title": "Add caching headers and prefetch config",
+      "description": "As a developer, I need proper caching for public pages and API routes.",
+      "acceptanceCriteria": [
+        "Public pages (landing, influencer profile, influencer listing) have appropriate `revalidate` config",
+        "Public API routes return `Cache-Control` headers",
+        "next/link components in navigation use prefetch appropriately",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "Covers US-PERF-006."
+    },
+    {
+      "id": "US-024",
+      "title": "Create reusable skeleton loading components",
+      "description": "As a user, I want consistent skeleton loading states across all pages.",
+      "acceptanceCriteria": [
+        "Created reusable skeleton components: SkeletonCard, SkeletonTable, SkeletonProfile, SkeletonDashboard in `src/components/ui/`",
+        "Replaced inconsistent loading patterns (spinner, skeleton grid, pulse, none) with the new skeleton components in at least Dashboard, Admin, and ClientPages",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "Covers US-PERF-007 and US-UI-007."
+    },
+    {
+      "id": "US-025",
+      "title": "Remove unused dependency and fix error response format",
+      "description": "As a developer, I need clean dependencies and consistent error responses.",
+      "acceptanceCriteria": [
+        "`bcryptjs` and `@types/bcryptjs` removed from package.json",
+        "Error responses standardized: all endpoints use consistent format `{ error: { code: string, message: string } }` or at minimum consistent `{ error: 'message' }` format",
+        "POST endpoints that create resources return 201 status code",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "Covers ARCH-005 and ARCH-002."
+    },
+    {
+      "id": "US-026",
+      "title": "Fix silent error handling in frontend",
+      "description": "As a user, I want to see error messages when data fails to load.",
+      "acceptanceCriteria": [
+        "All `.catch(() => {})` in AdminPages.tsx replaced with proper error handling that shows toast notification",
+        "All `.catch(() => {})` in ClientPages.tsx replaced with proper error handling",
+        "Using sonner toast (already installed) for error notifications",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": "Covers ARCH-003."
+    },
+    {
+      "id": "US-027",
+      "title": "Define design system tokens in Tailwind config",
+      "description": "As a developer, I need a documented design system with consistent tokens.",
+      "acceptanceCriteria": [
+        "Created `src/styles/design-system.md` documenting color palette, typography scale, spacing (4px grid), border-radius tokens, shadow tokens, and animation tokens",
+        "`tailwind.config.ts` updated with design system tokens (colors, spacing, borderRadius, boxShadow, animation/keyframes)",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": "Covers US-UI-001."
+    },
+    {
+      "id": "US-028",
+      "title": "Create reusable StatusBadge component",
+      "description": "As a developer, I need a single StatusBadge component to replace 4 different implementations.",
+      "acceptanceCriteria": [
+        "Created `src/components/ui/status-badge.tsx` with `<StatusBadge status={} />` component",
+        "Supports all booking statuses: pendente, confirmado, concluido, cancelado",
+        "Supports influencer statuses: pendente, ativo, rejeitado",
+        "Supports client statuses: ativo, bloqueado",
+        "Replaced status badge implementations in: AgendamentosPage.tsx, AdminPages.tsx, BookingDetailDialog.tsx, CalendarioPage.tsx",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": "Covers US-UI-006."
+    },
+    {
+      "id": "US-029",
+      "title": "Standardize form inputs to shadcn/ui",
+      "description": "As a developer, I need all form inputs using shadcn/ui components consistently.",
+      "acceptanceCriteria": [
+        "All raw `<input>` elements in ListaEspera.tsx replaced with shadcn `<Input>` component",
+        "All raw `<input>` elements in ClientesPage.tsx replaced with shadcn `<Input>` component",
+        "Consistent padding and focus ring styles across all forms",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": "Covers US-UI-008."
+    },
+    {
+      "id": "US-030",
+      "title": "Redesign landing page hero and navbar",
+      "description": "As a user, I want a premium landing page with impactful hero section and modern navbar.",
+      "acceptanceCriteria": [
+        "Hero section has: headline, clear CTA button, gradient background, entry animation",
+        "Navbar has glassmorphism/blur effect on scroll",
+        "'Como Funciona' section with 3-4 steps and icons",
+        "Footer redesigned with useful links and copyright 2026",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": "First part of US-UI-002."
+    },
+    {
+      "id": "US-031",
+      "title": "Redesign landing page influencer marketplace grid",
+      "description": "As a user, I want to browse influencers with rich cards, filters, and real-time search.",
+      "acceptanceCriteria": [
+        "Influencer cards show: photo, name, niche, followers, rating preview",
+        "Interactive niche filter (chips or dropdown)",
+        "Real-time search with debounce (300ms)",
+        "Responsive grid layout (1-2-3-4 columns based on viewport)",
+        "Staggered entry animation on cards",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": "Second part of US-UI-002."
+    },
+    {
+      "id": "US-032",
+      "title": "Redesign influencer panel layout and dashboard",
+      "description": "As an influencer, I want a modern panel with redesigned sidebar and real metric cards.",
+      "acceptanceCriteria": [
+        "Sidebar redesigned with icons, labels, and notification badge",
+        "Dashboard cards show real metrics from API (bookings count, revenue, clients, conversion)",
+        "Charts use design system colors",
+        "Tables redesigned with consistent StatusBadge component",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": "Covers US-UI-003."
+    },
+    {
+      "id": "US-033",
+      "title": "Redesign client area",
+      "description": "As a client, I want a clean interface to explore influencers and view my bookings.",
+      "acceptanceCriteria": [
+        "Marketplace view for exploring influencers",
+        "Client booking cards with visual timeline",
+        "Company profile form with clean layout",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": "Covers US-UI-004."
+    },
+    {
+      "id": "US-034",
+      "title": "Redesign admin panel",
+      "description": "As an admin, I want a modern dashboard with KPIs and improved data tables.",
+      "acceptanceCriteria": [
+        "Dashboard KPI cards with sparklines or visual indicators",
+        "Data tables are paginated with filters and sort",
+        "Approval process has visual checklist",
+        "Admin avatar uses real data instead of hardcoded 'A'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": "Covers US-UI-005."
+    },
+    {
+      "id": "US-035",
+      "title": "Split large view components into separate files",
+      "description": "As a developer, I need AdminPages.tsx and ClientPages.tsx split into individual page components.",
+      "acceptanceCriteria": [
+        "AdminPages.tsx split into: AdminDashboard.tsx, AdminInfluencers.tsx, AdminBookings.tsx, AdminClients.tsx, AdminWaitlist.tsx",
+        "ClientPages.tsx split into separate component files",
+        "All imports and routing updated to use new files",
+        "No functionality changes — pure refactor",
+        "Typecheck passes"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": "Covers ARCH-004."
+    },
+    {
+      "id": "US-036",
+      "title": "Fix influencer panel mobile responsiveness",
+      "description": "As a mobile user, I want the influencer panel to work well on small screens.",
+      "acceptanceCriteria": [
+        "Sidebar converts to bottom navigation or drawer on mobile (< 768px)",
+        "Tables convert to card-list layout on mobile",
+        "Calendar grid is usable on mobile (horizontal scroll or simplified view)",
+        "Dashboard cards stack vertically on mobile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": "Covers US-RESP-002."
+    },
+    {
+      "id": "US-037",
+      "title": "Fix admin panel mobile responsiveness",
+      "description": "As a mobile admin, I want the admin panel to work well on small screens.",
+      "acceptanceCriteria": [
+        "Admin sidebar converts to mobile navigation (< 768px)",
+        "Charts use responsive height instead of fixed 280px",
+        "Data tables convert to card view on mobile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": "Covers US-RESP-003."
+    },
+    {
+      "id": "US-038",
+      "title": "Fix booking wizard and public pages mobile responsiveness",
+      "description": "As a mobile user, I want the booking wizard and public pages to work on small screens.",
+      "acceptanceCriteria": [
+        "Booking steps indicator adapts for mobile (vertical or dots)",
+        "Date grid is usable on mobile screens",
+        "BookingDetailDialog is full-width on mobile",
+        "Influencer profile service grid responsive on mobile",
+        "Landing page cards responsive on mobile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": "Covers US-RESP-004 and US-RESP-005."
+    },
+    {
+      "id": "US-039",
+      "title": "Regenerate Supabase types and create Instagram OAuth migration",
+      "description": "As a developer, I need up-to-date Supabase types and the missing Instagram OAuth migration.",
+      "acceptanceCriteria": [
+        "If Instagram OAuth fields migration doesn't exist, create migration adding the 7 documented fields to influencers table",
+        "Supabase types regenerated or manually updated in `src/integrations/supabase/types.ts` to include Instagram OAuth fields",
+        "Typecheck passes"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": "Covers US-PEND-001 and DB-001. Prerequisite for Instagram feed and reviews."
+    },
+    {
+      "id": "US-040",
+      "title": "Create reviews database schema and API",
+      "description": "As a developer, I need the reviews table and API endpoints.",
+      "acceptanceCriteria": [
+        "Migration creates `reviews` table with: id (uuid PK), booking_id (FK unique), client_id (FK), influencer_id (FK), rating (1-5 check), texto (text), criado_em (timestamptz default now())",
+        "Index on reviews(influencer_id) created",
+        "RLS policies for reviews created (clients can insert for their bookings, anyone can read)",
+        "GET `/api/reviews?influencer_id=` returns reviews for an influencer",
+        "POST `/api/reviews` creates a review (only for completed bookings by the client)",
+        "Typecheck passes"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": "First part of US-PEND-002."
+    },
+    {
+      "id": "US-041",
+      "title": "Create reviews UI components",
+      "description": "As a user, I want to see and leave reviews on influencer profiles.",
+      "acceptanceCriteria": [
+        "ReviewForm component created — shown after booking status is 'concluido'",
+        "ReviewList component created — shows reviews on public influencer profile",
+        "Average rating calculated and displayed on profile",
+        "mockTestimonials in InfluencerProfile.tsx replaced with real reviews from API",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": "Second part of US-PEND-002. Depends on US-040."
+    },
+    {
+      "id": "US-042",
+      "title": "Integrate real Instagram feed",
+      "description": "As an influencer, I want my real Instagram feed shown on my profile when connected.",
+      "acceptanceCriteria": [
+        "`/api/instagram/feed` endpoint implemented with 1-hour cache",
+        "InstagramFeed.tsx uses real feed when `instagram_connected = true`",
+        "Fallback to Unsplash placeholder when not connected",
+        "All Instagram Graph API calls have 10s timeout via AbortController",
+        "Typecheck passes"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": "Covers US-PEND-003. Depends on US-039."
+    },
+    {
+      "id": "US-043",
+      "title": "Replace mock data with real data",
+      "description": "As a user, I want to see real data instead of mock/placeholder data.",
+      "acceptanceCriteria": [
+        "FeaturedInfluencers.tsx loads real influencers from the database instead of mock data with Unsplash fallback",
+        "mockStats in InfluencerProfile.tsx replaced with real metrics calculated from bookings",
+        "Admin avatar in AdminPages.tsx uses real admin user data instead of hardcoded 'A'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": "Covers US-PEND-006."
+    },
+    {
+      "id": "US-044",
+      "title": "Create real engagement metrics endpoint",
+      "description": "As an influencer, I want real engagement metrics on my profile and dashboard.",
+      "acceptanceCriteria": [
+        "Created `/api/influencers/[slug]/stats` endpoint returning: total completed bookings, unique clients, total revenue, conversion rate",
+        "Public influencer profile uses real stats from this endpoint",
+        "Influencer dashboard uses real stats",
+        "Typecheck passes"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": "Covers US-PEND-007."
+    },
+    {
+      "id": "US-045",
+      "title": "Setup Cypress testing framework",
+      "description": "As a developer, I need Cypress configured for E2E testing.",
+      "acceptanceCriteria": [
+        "Cypress installed and `cypress.config.ts` created with baseUrl and viewport config",
+        "Directory structure created: cypress/e2e/, cypress/fixtures/, cypress/support/",
+        "Custom commands created in cypress/support/commands.ts: cy.login(role), cy.apiRequest()",
+        "Support file cypress/support/e2e.ts created",
+        "package.json scripts added: cy:open, cy:run",
+        "Typecheck passes"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": "Covers US-TEST-001. Prerequisite for all test stories."
+    },
+    {
+      "id": "US-046",
+      "title": "Write E2E tests for auth endpoints",
+      "description": "As a developer, I need E2E tests covering all auth API routes.",
+      "acceptanceCriteria": [
+        "Tests for POST `/api/auth/exchange`: valid token, invalid token",
+        "Tests for POST `/api/auth/logout`: clears cookie",
+        "Tests for GET `/api/auth/me`: with token, without token",
+        "Tests for POST `/api/auth/register/influencer`: success, missing fields, duplicate username",
+        "All tests pass with `npx cypress run --spec cypress/e2e/auth/`"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": "Covers US-TEST-002."
+    },
+    {
+      "id": "US-047",
+      "title": "Write E2E tests for influencer and service endpoints",
+      "description": "As a developer, I need E2E tests for influencer and service APIs.",
+      "acceptanceCriteria": [
+        "Tests for GET `/api/influencers`: list, filters",
+        "Tests for GET `/api/influencers/[slug]`: existing, non-existing",
+        "Tests for GET/POST/PATCH/DELETE `/api/services`",
+        "All tests pass with `npx cypress run --spec cypress/e2e/influencers/,cypress/e2e/services/`"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": "Covers US-TEST-003 and US-TEST-004."
+    },
+    {
+      "id": "US-048",
+      "title": "Write E2E tests for bookings, clients, and waitlist",
+      "description": "As a developer, I need E2E tests for booking, client, and waitlist APIs.",
+      "acceptanceCriteria": [
+        "Tests for POST/GET `/api/bookings`: create with availability, without availability, filters",
+        "Tests for GET `/api/bookings/client`",
+        "Tests for PATCH `/api/bookings/[id]/status`: valid and invalid transitions",
+        "Tests for GET/POST `/api/clients` and PATCH `/api/clients/[id]/status`",
+        "Tests for POST/GET `/api/waitlist` and PATCH `/api/waitlist/[id]/status`",
+        "All tests pass"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": "Covers US-TEST-005 and US-TEST-006."
+    },
+    {
+      "id": "US-049",
+      "title": "Write E2E tests for admin and authorization",
+      "description": "As a developer, I need E2E tests for admin APIs and authorization rules.",
+      "acceptanceCriteria": [
+        "Tests for GET `/api/admin/dashboard`",
+        "Tests for GET `/api/admin/influencers`",
+        "Tests for POST `/api/admin/influencers/[id]/approve` and reject",
+        "Authorization tests: client cannot access /painel, influencer cannot access /admin, unauthenticated redirects to /login",
+        "All tests pass"
+      ],
+      "priority": 49,
+      "passes": false,
+      "notes": "Covers US-TEST-007 and US-TEST-008."
+    },
+    {
+      "id": "US-050",
+      "title": "Write E2E business flow tests",
+      "description": "As a developer, I need end-to-end tests covering critical business flows.",
+      "acceptanceCriteria": [
+        "Test: influencer signup -> admin approval -> profile active -> client books -> influencer confirms -> completes",
+        "Test: waitlist lead -> influencer approves -> becomes client -> books service",
+        "Test: booking cancellation flow",
+        "All tests pass"
+      ],
+      "priority": 50,
+      "passes": false,
+      "notes": "Covers US-TEST-009."
+    },
+    {
+      "id": "US-051",
+      "title": "Enable TypeScript strict mode",
+      "description": "As a developer, I need TypeScript strict mode enabled to catch type errors.",
+      "acceptanceCriteria": [
+        "tsconfig.json updated: strict: true, noImplicitAny: true, strictNullChecks: true",
+        "All resulting TypeScript errors fixed",
+        "All `as any` casts reviewed and replaced with proper types where possible",
+        "Typecheck passes with `npx tsc --noEmit`",
+        "Build passes with `npm run build`"
+      ],
+      "priority": 51,
+      "passes": false,
+      "notes": "Covers US-SEC-007. Placed last because it may require touching many files and should be done after other changes stabilize."
+    }
+  ]
+}

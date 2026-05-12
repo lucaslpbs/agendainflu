@@ -3,6 +3,7 @@ import HeroSection from "@/components/landing/HeroSection";
 import HowItWorks from "@/components/landing/HowItWorks";
 import FeaturedInfluencers from "@/components/landing/FeaturedInfluencers";
 import FAQ from "@/components/landing/FAQ";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import Footer from "@/components/landing/Footer";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
 
@@ -13,6 +14,7 @@ const Index = () => {
       <HeroSection />
       <HowItWorks />
       <FeaturedInfluencers />
+      <TestimonialsSection />
       <FAQ />
       <Footer />
       <WhatsAppButton />

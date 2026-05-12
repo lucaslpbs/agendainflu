@@ -35,7 +35,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
     if (inf?.whatsapp) {
-      await sendWhatsApp(inf.whatsapp, 'Parabens, ' + inf.nome + '! Seu perfil foi APROVADO no AgendaInflu! Acesse seu painel: ' + appUrl + '/painel')
+      try {
+        await sendWhatsApp(inf.whatsapp, 'Parabens, ' + inf.nome + '! Seu perfil foi APROVADO no AgendaInflu! Acesse seu painel: ' + appUrl + '/painel')
+      } catch (waErr) {
+        console.error('WhatsApp notification failed (approve):', waErr)
+      }
     }
 
     return NextResponse.json({ approved: true })

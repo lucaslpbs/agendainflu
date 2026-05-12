@@ -20,7 +20,7 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="py-20 bg-secondary/50">
+    <section id="como-funciona" className="py-16 bg-secondary/50">
       <div className="container">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -31,11 +31,12 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <div className="relative grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="hidden md:block absolute top-16 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 z-0" />
           {steps.map((step, i) => (
             <div
               key={i}
-              className="relative bg-card rounded-2xl p-8 text-center shadow-sm border border-border hover:shadow-rosa transition-shadow duration-300 animate-fade-in"
+              className="relative bg-card rounded-2xl p-8 text-center shadow-sm border border-border hover:shadow-rosa hover:-translate-y-1 transition-all duration-300 animate-fade-in"
               style={{ animationDelay: `${i * 0.15}s` }}
             >
               <div className="w-14 h-14 rounded-2xl gradient-rosa flex items-center justify-center mx-auto mb-5">

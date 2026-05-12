@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const N8N_WEBHOOK = "https://n8n.trafficsolutions.cloud/webhook/20051d11-811f-4be9-8c5b-9cfafdab9c61";
+const N8N_WEBHOOK = process.env.N8N_WEBHOOK_URL;
 
 export async function POST(req: NextRequest) {
+  if (!N8N_WEBHOOK) {
+    console.error("[notify-whatsapp] N8N_WEBHOOK_URL is not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
   try {
     const payload = await req.json();
 

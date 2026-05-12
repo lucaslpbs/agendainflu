@@ -30,7 +30,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const supportWa = process.env.NEXT_PUBLIC_SUPPORT_WA || ''
     if (inf?.whatsapp) {
-      await sendWhatsApp(inf.whatsapp, 'Ola, ' + inf.nome + '. Sua solicitacao foi analisada. Motivo: ' + motivo + '. Duvidas? Fale conosco: ' + supportWa)
+      try {
+        await sendWhatsApp(inf.whatsapp, 'Ola, ' + inf.nome + '. Sua solicitacao foi analisada. Motivo: ' + motivo + '. Duvidas? Fale conosco: ' + supportWa)
+      } catch (waErr) {
+        console.error('WhatsApp notification failed (reject):', waErr)
+      }
     }
 
     return NextResponse.json({ rejected: true })

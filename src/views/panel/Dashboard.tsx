@@ -1,20 +1,42 @@
 'use client'
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBookings, useClients, useWaitlist } from "@/hooks/usePanelData";
 import PanelLayout from "@/components/panel/PanelLayout";
 import { CalendarCheck, Users, Clock, ClipboardList, TrendingUp, DollarSign, BarChart3, ArrowUpRight, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval, isToday, addMonths } from "date-fns";
+import dynamic from 'next/dynamic'
+
+const BarChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false })
+const Bar = dynamic<any>(() => import('recharts').then(m => ({ default: m.Bar })), { ssr: false })
+const XAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.XAxis })), { ssr: false })
+const YAxis = dynamic<any>(() => import('recharts').then(m => ({ default: m.YAxis })), { ssr: false })
+const Tooltip = dynamic<any>(() => import('recharts').then(m => ({ default: m.Tooltip })), { ssr: false })
+const ResponsiveContainer = dynamic<any>(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })), { ssr: false })
+const PieChart = dynamic<any>(() => import('recharts').then(m => ({ default: m.PieChart })), { ssr: false })
+const Pie = dynamic<any>(() => import('recharts').then(m => ({ default: m.Pie })), { ssr: false })
+const Cell = dynamic<any>(() => import('recharts').then(m => ({ default: m.Cell })), { ssr: false })
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { SkeletonDashboard } from "@/components/ui/SkeletonDashboard";
+import { StatusBadge } from "@/components/ui/status-badge";
+
+const CHART_COLORS = {
+  primary: "hsl(340, 82%, 43%)",
+  accent: "hsl(43, 89%, 38%)",
+  success: "hsl(150, 60%, 40%)",
+  destructive: "hsl(0, 84%, 60%)",
+  muted: "hsl(30, 30%, 88%)",
+}
 
 const Dashboard = () => {
   const { influencer } = useAuth();
+  const router = useRouter();
   const [dailyViewMonth, setDailyViewMonth] = useState(new Date());
 
-  const { data: allBookings = [] } = useBookings();
+  const { data: allBookings = [], isLoading } = useBookings();
   const { data: clients = [] } = useClients();
   const { data: waitlistItems = [] } = useWaitlist();
 
@@ -47,10 +69,10 @@ const Dashboard = () => {
   }, [allBookings]);
 
   const statusData = useMemo(() => [
-    { name: "Pendentes", value: allBookings.filter(b => b.status === "pendente").length, color: "hsl(43, 89%, 38%)" },
-    { name: "Confirmados", value: allBookings.filter(b => b.status === "confirmado").length, color: "hsl(340, 82%, 43%)" },
-    { name: "Concluídos", value: allBookings.filter(b => b.status === "concluido").length, color: "hsl(150, 60%, 40%)" },
-    { name: "Cancelados", value: allBookings.filter(b => b.status === "cancelado").length, color: "hsl(0, 84%, 60%)" },
+    { name: "Pendentes", value: allBookings.filter(b => b.status === "pendente").length, color: CHART_COLORS.accent },
+    { name: "Confirmados", value: allBookings.filter(b => b.status === "confirmado").length, color: CHART_COLORS.primary },
+    { name: "Concluídos", value: allBookings.filter(b => b.status === "concluido").length, color: CHART_COLORS.success },
+    { name: "Cancelados", value: allBookings.filter(b => b.status === "cancelado").length, color: CHART_COLORS.destructive },
   ].filter(d => d.value > 0), [allBookings]);
 
   const dailyData = useMemo(() => {
@@ -70,21 +92,19 @@ const Dashboard = () => {
   const recentBookings = allBookings.slice(0, 5);
 
   const cards = [
-    { label: "Total Agendamentos", value: stats.bookings, icon: CalendarCheck, gradient: "gradient-rosa", iconColor: "text-primary-foreground" },
-    { label: "Pendentes", value: stats.pending, icon: ClipboardList, gradient: "bg-accent", iconColor: "text-accent-foreground" },
-    { label: "Clientes Ativos", value: stats.clients, icon: Users, gradient: "gradient-gold", iconColor: "text-accent-foreground" },
-    { label: "Receita Total", value: `R$ ${revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, gradient: "gradient-rosa", iconColor: "text-primary-foreground" },
+    { label: "Total Agendamentos", value: stats.bookings, icon: CalendarCheck, href: "/painel/agendamentos" },
+    { label: "Pendentes", value: stats.pending, icon: ClipboardList, href: "/painel/agendamentos?status=pendente" },
+    { label: "Clientes Ativos", value: stats.clients, icon: Users, href: "/painel/clientes" },
+    { label: "Receita Total", value: `R$ ${revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, highlight: true, href: "/painel/agendamentos" },
   ];
 
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pendente: "bg-accent/20 text-accent",
-      confirmado: "bg-primary/20 text-primary",
-      concluido: "bg-green-100 text-green-700",
-      cancelado: "bg-destructive/20 text-destructive",
-    };
-    return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{status}</span>;
-  };
+  if (isLoading) {
+    return (
+      <PanelLayout>
+        <SkeletonDashboard />
+      </PanelLayout>
+    );
+  }
 
   return (
     <PanelLayout>
@@ -102,21 +122,45 @@ const Dashboard = () => {
         )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {cards.map((c) => (
-            <div key={c.label} className="relative overflow-hidden rounded-2xl p-6 shadow-rosa transition-all hover:scale-[1.02]">
-              <div className={`absolute inset-0 ${c.gradient} opacity-90`} />
-              <div className="relative z-10">
+          {cards.map((c) =>
+            c.highlight ? (
+              <div
+                key={c.label}
+                className="bg-primary/5 rounded-2xl border border-primary/20 p-6 hover:shadow-sm transition-all hover:scale-[1.01] cursor-pointer active:scale-[0.98]"
+                onClick={() => router.push(c.href)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(c.href)}
+              >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <c.icon size={20} className={c.iconColor} />
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <c.icon size={20} className="text-primary" />
                   </div>
-                  <ArrowUpRight size={16} className={c.iconColor + " opacity-60"} />
+                  <ArrowUpRight size={14} className="text-muted-foreground/40" />
                 </div>
-                <p className="text-2xl font-bold text-white">{c.value}</p>
-                <p className="text-sm text-white/80">{c.label}</p>
+                <p className="text-2xl font-bold text-primary">{c.value}</p>
+                <p className="text-sm text-muted-foreground mt-1">{c.label}</p>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div
+                key={c.label}
+                className="bg-card rounded-2xl border border-border p-6 hover:shadow-sm transition-all hover:scale-[1.01] cursor-pointer active:scale-[0.98]"
+                onClick={() => router.push(c.href)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(c.href)}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center">
+                    <c.icon size={20} className="text-primary" />
+                  </div>
+                  <ArrowUpRight size={14} className="text-muted-foreground/40" />
+                </div>
+                <p className="text-2xl font-bold">{c.value}</p>
+                <p className="text-sm text-muted-foreground mt-1">{c.label}</p>
+              </div>
+            )
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -125,14 +169,25 @@ const Dashboard = () => {
               <BarChart3 size={18} className="text-primary" />
               <h3 className="font-display font-semibold">Agendamentos por Mês</h3>
             </div>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(30 30% 88%)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }} formatter={(value: number) => [value, "Agendamentos"]} />
-                <Bar dataKey="agendamentos" fill="hsl(340, 82%, 43%)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {allBookings.length > 0 ? (
+              <div style={{ width: '100%', height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData}>
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                      formatter={(value: number) => [value, "Agendamentos"]}
+                    />
+                    <Bar dataKey="agendamentos" fill={CHART_COLORS.primary} radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-60 text-sm text-muted-foreground">
+                Nenhum agendamento ainda
+              </div>
+            )}
           </div>
 
           <div className="bg-card rounded-2xl border border-border p-6">
@@ -142,14 +197,19 @@ const Dashboard = () => {
             </div>
             {statusData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                      {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip formatter={(value: number, name: string) => [value, name]} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: 180 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
+                        {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                        formatter={(value: number, name: string) => [value, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
                 <div className="flex flex-wrap gap-3 mt-2 justify-center">
                   {statusData.map((d) => (
                     <span key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -195,29 +255,37 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dailyData}>
-              <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={1} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid hsl(30 30% 88%)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                formatter={(value: number, name: string) => {
-                  if (name === "receita") return [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Receita"];
-                  return [value, "Agendamentos"];
-                }}
-                labelFormatter={(label) => `Dia ${label}`}
-              />
-              <Bar dataKey="agendamentos" fill="hsl(340, 82%, 43%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="receita" fill="hsl(43, 89%, 38%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {dailyData.some(d => d.agendamentos > 0) ? (
+            <div style={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyData}>
+                  <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={1} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                    formatter={(value: number, name: string) => {
+                      if (name === "receita") return [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Receita"];
+                      return [value, "Agendamentos"];
+                    }}
+                    labelFormatter={(label: string) => `Dia ${label}`}
+                  />
+                  <Bar dataKey="agendamentos" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="receita" fill={CHART_COLORS.accent} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+              Sem agendamentos neste mês
+            </div>
+          )}
 
           <div className="flex gap-4 justify-center mt-3">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(340, 82%, 43%)" }} /> Agendamentos
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS.primary }} /> Agendamentos
             </span>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(43, 89%, 38%)" }} /> Receita (R$)
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS.accent }} /> Receita (R$)
             </span>
           </div>
 
@@ -242,7 +310,7 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs font-medium">R$ {Number(b.services?.preco || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                        {statusBadge(b.status)}
+                        <StatusBadge status={b.status} />
                       </div>
                     </div>
                   ))}
@@ -271,7 +339,7 @@ const Dashboard = () => {
                     <span className="text-sm font-semibold text-primary">
                       R$ {Number(b.services?.preco || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </span>
-                    {statusBadge(b.status)}
+                    <StatusBadge status={b.status} />
                   </div>
                 </div>
               ))}

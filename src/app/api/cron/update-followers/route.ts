@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { timingSafeEqual } from 'crypto'
+
+function timingSafeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    // Compare against self to avoid timing leak on length mismatch
+    timingSafeEqual(bufA, bufA)
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
+}
 
 export async function POST(req: NextRequest) {
   const cronSecret = req.headers.get('x-cron-secret')
-  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !cronSecret || !timingSafeCompare(cronSecret, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: influencers } = await db
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: influencers } = await (db as any)
     .from('influencers')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .select('id, instagram_user_id, instagram_access_token, instagram_token_expires_at' as any)
-    .eq('instagram_connected', true as any)
+    .select('id, instagram_user_id, instagram_access_token, instagram_token_expires_at')
+    .eq('instagram_connected', true)
 
   if (!influencers?.length) {
     return NextResponse.json({ updated: 0, message: 'Nenhum influencer conectado' })
@@ -27,10 +39,14 @@ export async function POST(req: NextRequest) {
 
     try {
       // Fetch current followers count
+      const followersController = new AbortController()
+      const followersTimeout = setTimeout(() => followersController.abort(), 10_000)
       const res = await fetch(
         `https://graph.instagram.com/${record.instagram_user_id}?` +
-          new URLSearchParams({ fields: 'followers_count', access_token: record.instagram_access_token })
+          new URLSearchParams({ fields: 'followers_count', access_token: record.instagram_access_token }),
+        { signal: followersController.signal }
       )
+      clearTimeout(followersTimeout)
       const data = await res.json()
 
       if (data.error) {
@@ -48,13 +64,17 @@ export async function POST(req: NextRequest) {
 
       // Renew token if expiring within 10 days
       if (record.instagram_token_expires_at && new Date(record.instagram_token_expires_at) < tenDaysFromNow) {
+        const refreshController = new AbortController()
+        const refreshTimeout = setTimeout(() => refreshController.abort(), 10_000)
         const refreshRes = await fetch(
           'https://graph.instagram.com/refresh_access_token?' +
             new URLSearchParams({
               grant_type: 'ig_refresh_token',
               access_token: record.instagram_access_token,
-            })
+            }),
+          { signal: refreshController.signal }
         )
+        clearTimeout(refreshTimeout)
         const refreshData = await refreshRes.json()
         if (!refreshData.error && refreshData.access_token) {
           patch.instagram_access_token = refreshData.access_token

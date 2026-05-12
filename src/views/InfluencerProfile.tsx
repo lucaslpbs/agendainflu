@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Star, Instagram, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2, Lock } from "lucide-react";
+import Image from 'next/image'
+import { Star, Instagram, Calendar, MessageCircle, ExternalLink, Users, TrendingUp, Award, Heart, Sparkles, CheckCircle2, Lock, ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,19 +20,6 @@ const serviceIcons: Record<string, string> = {
   stories: "📱", reels: "🎬", reels_stories: "🎬📱", feed: "📸", presencial: "🤝",
 };
 
-const mockTestimonials = [
-  { nome: "Maria Silva", empresa: "Boutique Elegance", texto: "Resultado incrível! O engajamento da campanha superou todas as expectativas. Vendas aumentaram 40% no mês seguinte.", rating: 5, avatar: "M" },
-  { nome: "Carlos Mendes", empresa: "Tech Solutions", texto: "Profissional, pontual e criativa. Os conteúdos gerados foram autênticos e trouxeram leads qualificados para nosso negócio.", rating: 5, avatar: "C" },
-  { nome: "Ana Costa", empresa: "Café Artesanal", texto: "Nossa marca ganhou visibilidade real. Os stories foram tão naturais que o público amou. Parceria que deu muito certo!", rating: 5, avatar: "A" },
-];
-
-const mockStats = [
-  { label: "Campanhas realizadas", value: "50+", icon: Award },
-  { label: "Marcas atendidas", value: "30+", icon: Users },
-  { label: "Taxa de engajamento", value: "4.8%", icon: TrendingUp },
-  { label: "Satisfação dos clientes", value: "98%", icon: Heart },
-];
-
 const InfluencerProfile = () => {
   const params = useParams();
   const username = params?.username as string;
@@ -41,6 +29,8 @@ const InfluencerProfile = () => {
   const [services, setServices] = useState<Tables<"services">[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExistingClient, setIsExistingClient] = useState(false);
+  const [realStats, setRealStats] = useState<any>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +42,10 @@ const InfluencerProfile = () => {
         .eq("status", "ativa")
         .maybeSingle();
       setInfluencer(inf);
+
+      if (inf) {
+        fetch(`/api/influencers/${username}/stats`).then(r => r.json()).then(setRealStats).catch(() => {});
+      }
 
       if (inf) {
         const { data: svc } = await supabase
@@ -129,10 +123,20 @@ const InfluencerProfile = () => {
 
       {/* Hero Banner */}
       <div className="relative pt-16">
-        <div className="h-48 md:h-64 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_70%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--accent)/0.1),transparent_70%)]" />
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        <div className="h-48 md:h-64 relative overflow-hidden">
+          {influencer.cover_url ? (
+            <>
+              <Image src={influencer.cover_url} alt="Capa" fill priority className="object-cover" />
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent" />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_70%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--accent)/0.1),transparent_70%)]" />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+            </>
+          )}
         </div>
 
         {/* Profile Card */}
@@ -142,7 +146,8 @@ const InfluencerProfile = () => {
               {/* Avatar */}
               <div className="relative">
                 {influencer.foto_url ? (
-                  <img src={influencer.foto_url} alt={influencer.nome}
+                  <Image src={influencer.foto_url!} alt={influencer.nome}
+                    width={144} height={144} priority
                     className="w-32 h-32 md:w-36 md:h-36 rounded-2xl object-cover border-4 border-card shadow-xl" />
                 ) : (
                   <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-5xl font-bold shadow-xl">
@@ -225,6 +230,34 @@ const InfluencerProfile = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{influencer.bio}</p>
               </div>
             )}
+
+            {/* Galeria de fotos */}
+            {influencer.fotos && influencer.fotos.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <ImageIcon size={16} className="text-primary" />
+                  Portfólio
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {influencer.fotos.slice(0, 6).map((foto, idx) => (
+                    <div
+                      key={idx}
+                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
+                      onClick={() => setSelectedPhoto(foto)}
+                    >
+                      <Image
+                        src={foto}
+                        alt={`Foto ${idx + 1} de ${influencer.nome}`}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                        sizes="(max-width: 768px) 33vw, 20vw"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -232,7 +265,12 @@ const InfluencerProfile = () => {
       {/* Stats */}
       <div className="container max-w-5xl mt-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {mockStats.map((stat) => (
+          {[
+            { label: "Campanhas realizadas", value: realStats?.completed_bookings ?? '—', icon: Award },
+            { label: "Marcas atendidas", value: realStats?.unique_clients ?? '—', icon: Users },
+            { label: "Taxa de engajamento", value: realStats?.conversion_rate != null ? `${realStats.conversion_rate}%` : '—', icon: TrendingUp },
+            { label: "Satisfação dos clientes", value: "98%", icon: Heart },
+          ].map((stat) => (
             <div key={stat.label} className="bg-card rounded-xl border border-border p-5 text-center hover:shadow-md transition-shadow">
               <stat.icon className="mx-auto text-primary mb-2" size={24} />
               <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -304,33 +342,12 @@ const InfluencerProfile = () => {
         )}
       </div>
 
-      {/* Testimonials */}
+      {/* Reviews */}
       <div className="container max-w-5xl mt-12 mb-16">
         <h2 className="text-xl md:text-2xl font-bold font-display mb-6">
           O que dizem os <span className="text-primary">clientes</span>
         </h2>
-        <div className="grid sm:grid-cols-3 gap-5">
-          {mockTestimonials.map((t, i) => (
-            <div key={i} className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-shadow relative">
-              <div className="absolute -top-3 left-6 bg-primary/10 text-primary text-lg px-2 rounded-md">"</div>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-4 mt-2">{t.texto}</p>
-              <div className="flex items-center gap-0.5 mb-3">
-                {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star key={j} size={12} className="fill-accent text-accent" />
-                ))}
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-border">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-sm font-bold">
-                  {t.avatar}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{t.nome}</p>
-                  <p className="text-xs text-muted-foreground">{t.empresa}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ReviewList influencerId={influencer.id} />
       </div>
 
       {/* Final CTA */}
@@ -373,6 +390,43 @@ const InfluencerProfile = () => {
       </div>
 
       <Footer />
+
+      {/* Lightbox */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <Image
+              src={selectedPhoto}
+              alt="Foto ampliada"
+              fill
+              className="object-contain"
+              sizes="90vw"
+            />
+            <button
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <X size={20} />
+            </button>
+            {influencer.fotos && influencer.fotos.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {influencer.fotos.map((foto, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); setSelectedPhoto(foto); }}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      selectedPhoto === foto ? "bg-white" : "bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -380,6 +434,8 @@ const InfluencerProfile = () => {
 // Need toast import
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
-import InstagramFeed from "@/components/profile/InstagramFeed";
+import dynamic from 'next/dynamic'
+const InstagramFeed = dynamic(() => import('@/components/profile/InstagramFeed'), { ssr: false })
+const ReviewList = dynamic(() => import('@/components/profile/ReviewList').then(m => m.ReviewList), { ssr: false })
 
 export default InfluencerProfile;

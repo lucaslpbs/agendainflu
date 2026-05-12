@@ -51,7 +51,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         .maybeSingle()
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-      await sendWhatsApp(item.whatsapp, 'Boa noticia, ' + item.nome + '! Voce foi aprovado(a) para agendar com ' + (inf?.nome || 'a influenciadora') + '! Acesse: ' + appUrl + '/' + (inf?.username || ''))
+      try {
+        await sendWhatsApp(item.whatsapp, 'Boa noticia, ' + item.nome + '! Voce foi aprovado(a) para agendar com ' + (inf?.nome || 'a influenciadora') + '! Acesse: ' + appUrl + '/' + (inf?.username || ''))
+      } catch (waErr) {
+        console.error('WhatsApp notification failed (waitlist approval):', waErr)
+      }
     }
 
     return NextResponse.json({ updated: true, client_created })

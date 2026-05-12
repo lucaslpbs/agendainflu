@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireInfluencer } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
+
+const mesParamSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, {
+  message: 'mes must be in YYYY-MM format with month 01-12',
+})
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,9 +22,19 @@ export async function GET(req: NextRequest) {
       .eq('influencer_id', auth.influencer_id)
 
     if (mes) {
-      const [year, month] = mes.split('-')
+      const parsed = mesParamSchema.safeParse(mes)
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: parsed.error.errors.map(e => e.message).join(', ') },
+          { status: 400 }
+        )
+      }
+
+      const [year, month] = mes.split('-').map(Number)
       const start = mes + '-01'
-      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+      // new Date(year, month, 0) returns the last day of the given month
+      // because day 0 of month N+1 is the last day of month N
+      const lastDay = new Date(year, month, 0).getDate()
       const end = mes + '-' + String(lastDay).padStart(2, '0')
       query = query.gte('data', start).lte('data', end)
     }

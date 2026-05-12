@@ -71,11 +71,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       } else if (newStatus === 'concluido') {
         msg = 'Ola ' + client.nome + '! Como foi a divulgacao com ' + inf?.nome + '? Agradecemos a parceria!'
       }
-      if (msg) mensagem_enviada = await sendWhatsApp(client.whatsapp, msg)
+      if (msg) {
+        try {
+          mensagem_enviada = await sendWhatsApp(client.whatsapp, msg)
+        } catch (waErr) {
+          console.error('WhatsApp notification failed (booking status):', waErr)
+        }
+      }
     }
 
     return NextResponse.json({ booking: updated, mensagem_enviada })
   } catch (e) {
+    console.error('[PATCH /api/bookings/[id]/status] Error:', e)
     return apiError(e)
   }
 }

@@ -8,13 +8,23 @@ import { createClient } from '@supabase/supabase-js'
 import { signJWT } from '@/lib/jwt'
 import { db } from '@/lib/db'
 import { apiError } from '@/lib/errors'
+import { exchangeTokenSchema } from '@/lib/schemas'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { key: 'auth-exchange', limit: 10, windowMs: 60_000 })
+  if (rl) return rl
+
   try {
-    const { supabase_token } = await req.json()
-    if (!supabase_token) {
-      return NextResponse.json({ error: 'Token obrigatório' }, { status: 400 })
+    const body = await req.json()
+    const parsed = exchangeTokenSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map(e => e.message).join(', ') },
+        { status: 400 }
+      )
     }
+    const { supabase_token } = parsed.data
 
     // Validar token Supabase
     const anonClient = createClient(
@@ -68,7 +78,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })

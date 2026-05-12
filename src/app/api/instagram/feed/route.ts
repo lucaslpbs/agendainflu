@@ -11,25 +11,27 @@ export async function GET(req: NextRequest) {
 
   const { data: inf } = await db
     .from('influencers')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .select('instagram_user_id, instagram_access_token, instagram_connected' as any)
+    .select('instagram_user_id, instagram_access_token, instagram_connected')
     .eq('id', influencerId)
     .maybeSingle()
 
-  const record = inf as any
-  if (!record?.instagram_connected || !record?.instagram_access_token) {
+  if (!inf?.instagram_connected || !inf?.instagram_access_token) {
     return NextResponse.json({ posts: [], connected: false })
   }
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
     const mediaRes = await fetch(
-      `https://graph.instagram.com/${record.instagram_user_id}/media?` +
+      `https://graph.instagram.com/${inf.instagram_user_id}/media?` +
         new URLSearchParams({
           fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp',
           limit: '12',
-          access_token: record.instagram_access_token,
-        })
+          access_token: inf.instagram_access_token,
+        }),
+      { signal: controller.signal }
     )
+    clearTimeout(timeout)
     const mediaData = await mediaRes.json()
 
     if (mediaData.error) {
@@ -37,13 +39,16 @@ export async function GET(req: NextRequest) {
       if (mediaData.error.code === 190) {
         await db
           .from('influencers')
-          .update({ instagram_connected: false } as any)
+          .update({ instagram_connected: false })
           .eq('id', influencerId)
       }
       return NextResponse.json({ posts: [], connected: false, error: mediaData.error.message })
     }
 
-    return NextResponse.json({ posts: mediaData.data ?? [], connected: true })
+    return NextResponse.json(
+      { posts: mediaData.data ?? [], connected: true },
+      { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' } }
+    )
   } catch (err) {
     console.error('[Instagram Feed]', err)
     return NextResponse.json({ posts: [], connected: false })
