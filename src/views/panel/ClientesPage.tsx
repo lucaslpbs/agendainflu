@@ -53,8 +53,9 @@ const ClientesPage = () => {
   };
 
   const filtered = clients.filter((c) =>
-    c.nome.toLowerCase().includes(filter.toLowerCase()) ||
-    (c.empresa?.toLowerCase().includes(filter.toLowerCase()) ?? false)
+    c.status !== "espera" &&
+    (c.nome.toLowerCase().includes(filter.toLowerCase()) ||
+    (c.empresa?.toLowerCase().includes(filter.toLowerCase()) ?? false))
   );
 
   return (
