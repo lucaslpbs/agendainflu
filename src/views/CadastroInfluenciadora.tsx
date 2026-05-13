@@ -118,7 +118,7 @@ const CadastroInfluenciadora = () => {
           whatsapp: form.whatsapp,
           bio: form.bio,
           nicho: form.nicho,
-          seguidores: form.seguidores,
+          seguidores: form.seguidores ? (parseInt(form.seguidores.replace(/\D/g, ''), 10) || null) : null,
           instagram: form.instagram,
           foto_url,
           email: form.email,
