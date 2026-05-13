@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"
-import { LogOut, Save, User, Building2, MapPin, AtSign, FileText } from "lucide-react";
+import { LogOut, Save, User, Building2, MapPin, AtSign, FileText, Upload, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ClientLayout } from "./ClientLayout";
@@ -27,9 +27,11 @@ export const ClientProfile = () => {
     cnpj: "",
     endereco_comercial: "",
     tipo_pessoa: "pf" as "pf" | "pj",
+    foto_url: "",
   })
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [avatarUploading, setAvatarUploading] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -59,6 +61,7 @@ export const ClientProfile = () => {
             cnpj: cp.cnpj || "",
             endereco_comercial: cp.endereco_comercial || "",
             tipo_pessoa: cp.tipo_pessoa || "pf",
+            foto_url: (cp as any).foto_url || "",
           })
         } else if (cl) {
           setProfile(p => ({
