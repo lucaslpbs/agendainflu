@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import Navbar from "@/components/landing/Navbar";
-import Footer from "@/components/landing/Footer";
+import { Zap, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
 
 const Login = () => {
   const router = useRouter();
@@ -36,7 +35,6 @@ const Login = () => {
       return;
     }
 
-    // Exchange Supabase token for the app JWT (sets auth-token cookie)
     const accessToken = data.session?.access_token;
     if (accessToken) {
       const res = await fetch('/api/auth/exchange', {
@@ -70,82 +68,135 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center pt-16">
-        <div className="w-full max-w-md mx-auto p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Bem-vinda de volta</h1>
-            <p className="text-muted-foreground">Entre na sua conta AgendaInflu</p>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+      style={{ background: "#0A0A0F" }}
+    >
+      {/* Background orbs */}
+      <div className="absolute w-96 h-96 rounded-full bg-[#FF2D87]/8 blur-[120px] -top-20 -right-20 pointer-events-none" />
+      <div className="absolute w-80 h-80 rounded-full bg-[#7C3AED]/8 blur-[120px] -bottom-20 -left-20 pointer-events-none" />
+
+      {/* Logo topo */}
+      <Link href="/" className="flex items-center gap-1.5 mb-10 group">
+        <Zap size={22} className="text-[#FF2D87] group-hover:animate-glow-pulse" />
+        <span className="font-display text-2xl font-bold text-white">Agenda</span>
+        <span className="font-display text-2xl font-bold text-gradient-neon">Influ</span>
+      </Link>
+
+      <div className="w-full max-w-md mx-auto px-4">
+        {/* Card */}
+        <div className="card-gradient-border p-8 space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-1">
+              Bem-vinda de volta
+            </h1>
+            <p className="text-sm text-white/40">
+              Entre na sua conta AgendaInflu
+            </p>
           </div>
 
-          <div className="bg-card rounded-2xl border border-border p-8 shadow-sm space-y-6">
-            <form onSubmit={mode === "password" ? handlePasswordLogin : handleMagicLink} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">E-mail</label>
+          <form
+            onSubmit={mode === "password" ? handlePasswordLogin : handleMagicLink}
+            className="space-y-4"
+          >
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                E-mail
+              </label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
-                  className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#FF2D87]/50 focus:ring-1 focus:ring-[#FF2D87]/30 transition-colors"
                 />
               </div>
+            </div>
 
-              {mode === "password" && (
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">Senha</label>
+            {/* Senha */}
+            {mode === "password" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                  Senha
+                </label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#FF2D87]/50 focus:ring-1 focus:ring-[#FF2D87]/30 transition-colors"
                   />
                 </div>
-              )}
-
-              <Button variant="hero" className="w-full" size="lg" disabled={loading}>
-                {loading ? "Aguarde..." : mode === "password" ? "Entrar" : "Enviar Magic Link"}
-              </Button>
-            </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
               </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">ou</span>
-              </div>
-            </div>
+            )}
 
             <Button
-              variant="outline"
-              className="w-full"
-              size="lg"
-              onClick={() => setMode(mode === "password" ? "magic" : "password")}
+              variant="hero"
+              className="w-full btn-shimmer h-12 text-base font-semibold"
+              disabled={loading}
             >
-              {mode === "password" ? "Entrar com Magic Link" : "Entrar com senha"}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Aguarde...
+                </span>
+              ) : (
+                <>
+                  {mode === "password" ? "Entrar" : "Enviar Magic Link"}
+                  <ArrowRight size={16} />
+                </>
+              )}
             </Button>
+          </form>
 
-            <div className="text-center text-sm text-muted-foreground space-y-2">
-              <p>Não tem conta?</p>
-              <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                <Link href="/cadastro-cliente" className="text-primary font-medium hover:underline">
-                  Sou empresa/cliente
-                </Link>
-                <span className="hidden sm:inline text-border">|</span>
-                <Link href="/cadastro-influenciadora" className="text-accent font-medium hover:underline">
-                  Sou influenciadora
-                </Link>
-              </div>
+          {/* Divider */}
+          <div className="relative flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/8" />
+            <span className="text-xs text-white/30">ou</span>
+            <div className="flex-1 h-px bg-white/8" />
+          </div>
+
+          {/* Magic link toggle */}
+          <button
+            type="button"
+            onClick={() => setMode(mode === "password" ? "magic" : "password")}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/5 text-sm text-white/60 hover:text-white hover:border-white/20 hover:bg-white/8 transition-all"
+          >
+            <Sparkles size={15} />
+            {mode === "password" ? "Entrar com Magic Link" : "Entrar com senha"}
+          </button>
+
+          {/* Sign up links */}
+          <div className="text-center text-sm text-white/40 space-y-2">
+            <p>Não tem conta?</p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Link
+                href="/cadastro-cliente"
+                className="text-[#00D4FF] font-medium hover:text-white transition-colors"
+              >
+                Sou empresa/cliente
+              </Link>
+              <span className="hidden sm:inline text-white/20">|</span>
+              <Link
+                href="/cadastro-influenciadora"
+                className="text-[#FF2D87] font-medium hover:text-white transition-colors"
+              >
+                Sou influenciadora
+              </Link>
             </div>
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

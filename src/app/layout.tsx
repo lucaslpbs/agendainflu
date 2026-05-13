@@ -1,25 +1,25 @@
 import type { Metadata } from 'next'
-import { Playfair_Display, DM_Sans } from 'next/font/google'
+import { Space_Grotesk, Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 
-const playfair = Playfair_Display({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-playfair',
+  variable: '--font-space-grotesk',
   display: 'swap',
 })
 
-const dmSans = DM_Sans({
+const inter = Inter({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-dm-sans',
+  variable: '--font-inter',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'AgendaInflu - Agende Divulgações com Influenciadoras',
-  description: 'Plataforma de agendamento de divulgações pagas com influenciadoras. Conecte sua marca às melhores influenciadoras de forma simples e organizada.',
+  title: 'AgendaInflu — Sua agenda. Sua marca. Seu negócio.',
+  description: 'A plataforma que transforma criadores de conteúdo em negócios organizados. Página personalizada, gestão de serviços e agendamentos em um só lugar.',
 }
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={`${playfair.variable} ${dmSans.variable}`}>
+    <html lang="pt-BR" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>

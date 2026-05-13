@@ -1,67 +1,71 @@
 'use client'
 
 import Link from "next/link";
-import { Instagram, Heart } from "lucide-react";
+import { Instagram } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-secondary/40 border-t border-border">
-      <div className="container py-12">
-        {/* Trust stats bar */}
-        <div className="grid grid-cols-3 gap-4 py-8 mb-8 border-b border-border/50">
-          {[
-            { value: "500+", label: "Marcas atendidas" },
-            { value: "120+", label: "Influenciadoras ativas" },
-            { value: "4.9★", label: "Avaliação média" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-2xl font-bold text-primary">{s.value}</p>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Col 1: Logo + tagline */}
-          <div className="space-y-3">
-            <Link href="/" className="font-display text-xl font-bold text-primary block">
-              Agenda<span className="text-gradient-gold">Influ</span>
+    <footer style={{ background: "#0A0A0F", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="container py-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
+          {/* Logo + tagline */}
+          <div>
+            <Link href="/" className="font-display text-3xl font-bold block mb-3">
+              <span className="text-white">agenda</span>
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #FF2D87, #7C3AED)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                influ
+              </span>
             </Link>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              A plataforma de agendamento para influenciadoras e marcas.
+            <p className="text-white/30 text-sm max-w-xs leading-relaxed">
+              A plataforma para influenciadoras gerenciarem seus agendamentos com profissionalismo.
             </p>
           </div>
 
-          {/* Col 2: Links */}
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">Links</p>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#como-funciona" className="hover:text-primary transition-colors">Como funciona</Link></li>
-              <li><Link href="#influenciadoras" className="hover:text-primary transition-colors">Influenciadoras</Link></li>
-              <li><Link href="/cadastro-influenciadora" className="hover:text-primary transition-colors">Para influenciadoras</Link></li>
-              <li><Link href="/login" className="hover:text-primary transition-colors">Entrar</Link></li>
-            </ul>
-          </div>
+          {/* Links + social */}
+          <div className="flex flex-col sm:flex-row gap-12">
+            <div className="space-y-3">
+              <p className="text-white/20 text-xs uppercase tracking-widest">Plataforma</p>
+              <ul className="space-y-2">
+                {[
+                  { label: "Como funciona", href: "#como-funciona" },
+                  { label: "Para influenciadoras", href: "/cadastro-influenciadora" },
+                  { label: "Entrar", href: "/login" },
+                ].map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="text-sm text-white/40 hover:text-white transition-colors">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Col 3: Contact */}
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">Fale conosco</p>
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Instagram size={16} />
-              @agendainflu
-            </a>
-            <p className="text-xs text-muted-foreground">Respondemos em até 24h via direct.</p>
+            <div className="space-y-3">
+              <p className="text-white/20 text-xs uppercase tracking-widest">Contato</p>
+              <a
+                href="https://instagram.com/agendainflu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-white/40 hover:text-[#FF2D87] transition-colors"
+              >
+                <Instagram size={15} />
+                @agendainflu
+              </a>
+              <p className="text-xs text-white/20">Direct em até 24h</p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex items-center justify-center text-xs text-muted-foreground gap-1">
-          <Heart size={11} className="text-primary fill-primary" />
-          AgendaInflu © 2026 — Todos os direitos reservados
+        <div className="mt-16 pt-8 border-t border-white/6 flex items-center justify-between text-xs text-white/20">
+          <span>© 2026 AgendaInflu</span>
+          <span>Todos os direitos reservados</span>
         </div>
       </div>
     </footer>
