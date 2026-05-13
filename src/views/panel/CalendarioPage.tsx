@@ -22,7 +22,7 @@ const CalendarioPage = () => {
 
   const [multiMode, setMultiMode] = useState(false);
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [multiSlots, setMultiSlots] = useState(1);
+  const [multiSlots, setMultiSlots] = useState(10);
   const [multiBlocked, setMultiBlocked] = useState(false);
   const [savingMulti, setSavingMulti] = useState(false);
 
@@ -48,7 +48,7 @@ const CalendarioPage = () => {
       await saveAvailability.mutateAsync({
         data: date,
         bloqueado: !existing?.bloqueado,
-        slots_disponiveis: existing?.slots_disponiveis || 1,
+        slots_disponiveis: existing?.slots_disponiveis || 10,
       });
     } catch (err: any) {
       toast.error(err.message);
@@ -73,7 +73,7 @@ const CalendarioPage = () => {
   const selectDay = (dateStr: string) => {
     setSelectedDate(dateStr);
     const av = availability.find((a) => a.data === dateStr);
-    setEditingSlots(av?.slots_disponiveis || 1);
+    setEditingSlots(av?.slots_disponiveis || 10);
   };
 
   const toggleMultiDate = (dateStr: string) => {
@@ -202,8 +202,20 @@ const CalendarioPage = () => {
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => selectDay(dateStr)}
-                      className={`relative aspect-square rounded-xl border text-sm font-medium transition-all ${statusColors[status]} ${isSelected ? "ring-2 ring-primary scale-105" : ""} ${isToday(day) ? "ring-2 ring-accent" : ""} ${isPast ? "opacity-50" : ""}`}
+                      onClick={() => {
+                        if (multiMode) {
+                          toggleMultiDate(dateStr);
+                        } else {
+                          selectDay(dateStr);
+                        }
+                      }}
+                      className={`relative aspect-square rounded-xl border text-sm font-medium transition-all
+                        ${statusColors[status]}
+                        ${!multiMode && isSelected ? "ring-2 ring-primary scale-105" : ""}
+                        ${multiMode && selectedDates.includes(dateStr) ? "ring-2 ring-accent scale-105 bg-accent/20" : ""}
+                        ${isToday(day) ? "ring-2 ring-accent" : ""}
+                        ${isPast ? "opacity-50" : ""}
+                      `}
                     >
                       {format(day, "d")}
                       {count > 0 && (
@@ -219,7 +231,70 @@ const CalendarioPage = () => {
           </div>
 
           <div className="lg:col-span-2 space-y-4">
-            {selectedDate ? (
+            {multiMode ? (
+              <div className="bg-card rounded-2xl border border-accent/30 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-semibold text-sm">Configurar múltiplos dias</h3>
+                  <span className="text-xs bg-accent/10 text-accent px-2.5 py-1 rounded-full font-medium">
+                    {selectedDates.length} dia(s) selecionado(s)
+                  </span>
+                </div>
+
+                {selectedDates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Clique nos dias do calendário para selecioná-los
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedDates.sort().map(d => (
+                      <span key={d} className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-lg flex items-center gap-1">
+                        {format(new Date(d + "T12:00:00"), "dd/MM", { locale: ptBR })}
+                        <button onClick={() => toggleMultiDate(d)} className="hover:text-destructive">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                      Limite de agendamentos por dia
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={multiSlots}
+                      onChange={(e) => setMultiSlots(Number(e.target.value))}
+                      className="w-24"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => setMultiBlocked(!multiBlocked)}
+                    className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border transition-all ${
+                      multiBlocked
+                        ? "bg-destructive/10 border-destructive/30 text-destructive"
+                        : "bg-background border-border text-muted-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {multiBlocked ? <Lock size={14} /> : <Unlock size={14} />}
+                    {multiBlocked ? "Bloquear dias selecionados" : "Dias disponíveis"}
+                  </button>
+                </div>
+
+                <Button
+                  className="w-full gap-2"
+                  onClick={saveMultiDays}
+                  disabled={savingMulti || selectedDates.length === 0}
+                >
+                  <CalendarCheck size={14} />
+                  {savingMulti ? "Salvando..." : `Aplicar para ${selectedDates.length} dia(s)`}
+                </Button>
+              </div>
+            ) : selectedDate ? (
               <>
                 <div className="bg-card rounded-2xl border border-border p-5">
                   <div className="flex items-center justify-between mb-4">

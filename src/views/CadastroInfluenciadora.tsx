@@ -20,6 +20,7 @@ const CadastroInfluenciadora = () => {
     nome: "", email: "", senha: "", whatsapp: "", instagram: "", seguidores: "", nicho: "", bio: "",
   });
   const [foto, setFoto] = useState<File | null>(null);
+  const [usernamePreview, setUsernamePreview] = useState("");
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -174,7 +175,16 @@ const CadastroInfluenciadora = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Instagram *</label>
-                <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} required placeholder="@seuinstagram" className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                <input type="text" value={form.instagram} onChange={(e) => {
+                  update("instagram", e.target.value)
+                  const handle = e.target.value.replace('@', '').toLowerCase().replace(/[^a-z0-9._]/g, '')
+                  setUsernamePreview(handle)
+                }} required placeholder="@seuinstagram" className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                {usernamePreview && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Seu perfil será: <span className="text-primary font-medium">agendainflu.vercel.app/{usernamePreview}</span>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Nº de seguidores</label>

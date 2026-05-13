@@ -25,21 +25,25 @@ export async function POST(req: NextRequest) {
     }
     const { user_id, nome, username: rawUsername, whatsapp, bio, nicho, seguidores, instagram, foto_url, email } = parsed.data
 
-    // Sanitizar username
-    const username = (rawUsername || nome)
+    // Prioridade: instagram handle > rawUsername > nome
+    const instagramHandle = instagram
+      ? instagram.replace('@', '').toLowerCase().replace(/[^a-z0-9._]/g, '')
+      : null
+
+    const baseUsername = instagramHandle || rawUsername || nome
       .toLowerCase()
       .replace(/\s+/g, '')
       .replace(/[^a-z0-9._]/g, '')
-      + Math.floor(Math.random() * 100)
 
-    // Verificar unicidade do username
-    const { data: existing } = await db
+    let username = baseUsername
+    const { data: existingBase } = await db
       .from('influencers')
       .select('id')
       .eq('username', username)
       .maybeSingle()
-    if (existing) {
-      return NextResponse.json({ error: 'CONFLICT: Username já em uso' }, { status: 409 })
+
+    if (existingBase) {
+      username = baseUsername + Math.floor(Math.random() * 100)
     }
 
     // Criar perfil de influencer
