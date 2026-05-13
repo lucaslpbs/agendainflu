@@ -44,6 +44,7 @@ const CadastroInfluenciadora = () => {
   });
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [usernamePreview, setUsernamePreview] = useState("");
 
   const update = (field: keyof FormData, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -315,10 +316,19 @@ const CadastroInfluenciadora = () => {
                   <input
                     type="text"
                     value={form.instagram}
-                    onChange={(e) => update("instagram", e.target.value)}
+                    onChange={(e) => {
+                      update("instagram", e.target.value)
+                      const handle = e.target.value.replace('@', '').toLowerCase().replace(/[^a-z0-9._]/g, '')
+                      setUsernamePreview(handle)
+                    }}
                     placeholder="@seuinstagram"
                     className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#FF2D87]/50 focus:ring-1 focus:ring-[#FF2D87]/30 transition-colors"
                   />
+                  {usernamePreview && (
+                    <p className="text-xs text-white/40 mt-1">
+                      Seu perfil: <span className="text-[#FF2D87] font-medium">agendainflu.vercel.app/{usernamePreview}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Nº de seguidores</label>

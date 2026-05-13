@@ -6,7 +6,7 @@ import PanelLayout from "@/components/panel/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, MessageCircle, Ban, CheckCircle } from "lucide-react";
+import { Plus, MessageCircle, Ban, CheckCircle, Instagram } from "lucide-react";
 
 const ClientesPage = () => {
   const [filter, setFilter] = useState("");
@@ -101,6 +101,7 @@ const ClientesPage = () => {
                   <th className="text-left px-4 py-3 font-medium">Nome</th>
                   <th className="text-left px-4 py-3 font-medium">WhatsApp</th>
                   <th className="text-left px-4 py-3 font-medium">Empresa</th>
+                  <th className="text-left px-4 py-3 font-medium">Instagram</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
                   <th className="text-left px-4 py-3 font-medium">Ações</th>
                 </tr>
@@ -122,14 +123,35 @@ const ClientesPage = () => {
                       <td className="px-4 py-3">{c.nome}</td>
                       <td className="px-4 py-3">{c.whatsapp}</td>
                       <td className="px-4 py-3">{c.empresa || "—"}</td>
+                      <td className="px-4 py-3">
+                        {c.instagram ? (
+                          <a
+                            href={`https://instagram.com/${c.instagram.replace('@', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
+                          >
+                            <Instagram size={12} />
+                            @{c.instagram.replace('@', '')}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{statusBadge(c.status)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
                           <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MessageCircle size={14} /></Button>
                           </a>
-                          {c.status !== "ativo" && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(c.id, "ativo")}>
+                          {c.status === "espera" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-green-600 hover:text-green-700"
+                              title="Aprovar cliente"
+                              onClick={() => handleUpdateStatus(c.id, "ativo")}
+                            >
                               <CheckCircle size={14} />
                             </Button>
                           )}
