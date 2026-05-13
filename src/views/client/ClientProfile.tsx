@@ -82,6 +82,33 @@ export const ClientProfile = () => {
     load()
   }, [user])
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    setAvatarUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `clients/${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
+      if (uploadError) { toast.error(uploadError.message); return; }
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const { error } = await supabase
+        .from("client_profiles")
+        .upsert(
+          { user_id: user.id, foto_url: data.publicUrl } as any,
+          { onConflict: "user_id" }
+        );
+      if (error) throw error;
+      setProfile(p => ({ ...p, foto_url: data.publicUrl }));
+      toast.success("Foto atualizada!");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
@@ -98,7 +125,8 @@ export const ClientProfile = () => {
           cnpj: profile.cnpj || null,
           endereco_comercial: profile.endereco_comercial || null,
           tipo_pessoa: profile.tipo_pessoa,
-        }, { onConflict: "user_id" })
+          foto_url: profile.foto_url || null,
+        } as any, { onConflict: "user_id" })
 
       if (error) throw error
 
@@ -125,8 +153,28 @@ export const ClientProfile = () => {
 
         <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl border border-border p-6">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-rose-400 flex items-center justify-center text-white font-bold text-3xl shadow-rosa flex-shrink-0">
-              {profile.nome?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "C"}
+            <div className="relative flex-shrink-0">
+              {profile.foto_url ? (
+                <img
+                  src={profile.foto_url}
+                  alt="Foto"
+                  className="w-20 h-20 rounded-2xl object-cover shadow-rosa"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-rose-400 flex items-center justify-center text-white font-bold text-3xl shadow-rosa">
+                  {profile.nome?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "C"}
+                </div>
+              )}
+              <label className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+                {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={avatarUploading}
+                  onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
+                />
+              </label>
             </div>
             <div>
               <h2 className="text-xl font-bold font-display">
