@@ -31,7 +31,16 @@ const Login = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
-      toast.error(error.message);
+      if (error.message.includes('Invalid login credentials') ||
+          error.message.includes('invalid_credentials')) {
+        toast.error('E-mail ou senha incorretos. Verifique e tente novamente.')
+      } else if (error.message.includes('Email not confirmed')) {
+        toast.error('E-mail não confirmado. Verifique sua caixa de entrada e confirme seu cadastro.')
+      } else if (error.message.includes('Too many requests')) {
+        toast.error('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+      } else {
+        toast.error(error.message)
+      }
       return;
     }
 
@@ -61,7 +70,12 @@ const Login = () => {
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes('rate limit') ||
+          error.message.includes('Too many requests')) {
+        toast.error('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+      } else {
+        toast.error('Erro ao enviar o link. Verifique o e-mail e tente novamente.')
+      }
     } else {
       toast.success("Link de acesso enviado para seu e-mail!");
     }

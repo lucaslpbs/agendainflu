@@ -94,8 +94,20 @@ const CadastroInfluenciadora = () => {
           emailRedirectTo: (process.env.NEXT_PUBLIC_APP_URL || window.location.origin) + '/auth/callback',
         },
       });
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Erro ao criar conta");
+      if (authError) {
+        if (authError.message.includes('User already registered') ||
+            authError.message.includes('already registered')) {
+          throw new Error('Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.')
+        }
+        if (authError.message.includes('Password should be')) {
+          throw new Error('A senha deve ter no mínimo 6 caracteres.')
+        }
+        if (authError.message.includes('Invalid email')) {
+          throw new Error('E-mail inválido. Verifique e tente novamente.')
+        }
+        throw new Error(authError.message)
+      }
+      if (!authData.user) throw new Error('Erro ao criar conta. Tente novamente.')
 
       let foto_url = null;
       if (foto) {
@@ -128,7 +140,10 @@ const CadastroInfluenciadora = () => {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Erro ao criar perfil');
+        if (err.error?.includes('duplicate') || err.error?.includes('already exists')) {
+          throw new Error('Este Instagram ou e-mail já está cadastrado.')
+        }
+        throw new Error(err.error || 'Erro ao criar perfil. Tente novamente.')
       }
 
       const { influencer_id } = await res.json();
