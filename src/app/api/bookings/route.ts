@@ -110,6 +110,29 @@ export async function POST(req: NextRequest) {
       console.error('WhatsApp notification failed (booking creation):', waErr)
     }
 
+    try {
+      const webhookUrl = process.env.N8N_WEBHOOK_NOVO_AGENDAMENTO
+      if (webhookUrl && inf?.whatsapp) {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            evento: 'novo_agendamento',
+            influencer_nome: inf.nome,
+            influencer_whatsapp: inf.whatsapp,
+            cliente_nome: clientNome,
+            cliente_empresa: clientEmpresa,
+            servico_tipo: booking.service_tipo,
+            data_agendada: dataFormatada,
+            valor: valorFormatado,
+            codigo: codigo_confirmacao,
+          }),
+        })
+      }
+    } catch (waErr) {
+      console.error('[notify] novo_agendamento:', waErr)
+    }
+
     const wa_link = inf?.whatsapp
       ? 'https://wa.me/' + inf.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Ola ' + inf.nome + '! Codigo: ' + codigo_confirmacao)
       : null

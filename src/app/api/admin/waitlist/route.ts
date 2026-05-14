@@ -48,6 +48,34 @@ export async function PATCH(req: NextRequest) {
       .eq('id', id)
 
     if (error) throw error
+
+    if (status === 'aprovado') {
+      try {
+        const webhookUrl = process.env.N8N_WEBHOOK_WAITLIST_APROVADO
+        if (webhookUrl) {
+          const { data: waitlistRecord } = await db
+            .from('waitlist')
+            .select('nome, whatsapp')
+            .eq('id', id)
+            .single()
+
+          if (waitlistRecord?.whatsapp) {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                evento: 'waitlist_aprovado',
+                nome: waitlistRecord.nome,
+                whatsapp: waitlistRecord.whatsapp,
+              }),
+            })
+          }
+        }
+      } catch (waErr) {
+        console.error('[notify] waitlist_aprovado:', waErr)
+      }
+    }
+
     return NextResponse.json({ updated: true })
   } catch (e) {
     return apiError(e)

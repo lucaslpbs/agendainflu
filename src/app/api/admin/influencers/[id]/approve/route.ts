@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
-import { sendWhatsApp } from '@/lib/wa'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -33,13 +32,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data_analise: new Date().toISOString(),
     } as any, { onConflict: 'influencer_id' })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    if (inf?.whatsapp) {
-      try {
-        await sendWhatsApp(inf.whatsapp, 'Parabens, ' + inf.nome + '! Seu perfil foi APROVADO no AgendaInflu! Acesse seu painel: ' + appUrl + '/painel')
-      } catch (waErr) {
-        console.error('WhatsApp notification failed (approve):', waErr)
+    try {
+      const webhookUrl = process.env.N8N_WEBHOOK_INFLUENCER_APROVADO
+      if (webhookUrl && inf?.whatsapp) {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            evento: 'influencer_aprovado',
+            nome: inf.nome,
+            whatsapp: inf.whatsapp,
+          }),
+        })
       }
+    } catch (waErr) {
+      console.error('[notify] influencer_aprovado:', waErr)
     }
 
     return NextResponse.json({ approved: true })
