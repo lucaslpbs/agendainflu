@@ -96,7 +96,14 @@ export const ClientProfile = () => {
       const { error } = await supabase
         .from("client_profiles")
         .upsert(
-          { user_id: user.id, foto_url: data.publicUrl } as any,
+          {
+            user_id: user.id,
+            foto_url: data.publicUrl,
+            tipo_pessoa: profile.tipo_pessoa,
+            nome: profile.nome || null,
+            email: profile.email || null,
+            whatsapp: profile.whatsapp || null,
+          } as any,
           { onConflict: "user_id" }
         );
       if (error) throw error;
