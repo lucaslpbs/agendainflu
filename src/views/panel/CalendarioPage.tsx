@@ -142,10 +142,10 @@ const CalendarioPage = () => {
   return (
     <PanelLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h2 className="text-xl font-bold font-display">Calendário</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                 <ChevronLeft size={18} />
               </Button>

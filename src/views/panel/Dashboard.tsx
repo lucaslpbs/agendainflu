@@ -303,13 +303,13 @@ const Dashboard = () => {
                 </div>
                 <div className="space-y-1">
                   {d.bookings.map(b => (
-                    <div key={b.id} className="flex items-center justify-between text-sm py-1">
+                    <div key={b.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm py-1.5 border-t border-border/50 first:border-0 gap-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate">{b.clients?.nome || "Cliente"}</span>
-                        <span className="text-xs text-muted-foreground">• {b.services?.tipo}</span>
+                        <span className="truncate font-medium">{b.clients?.nome || "Cliente"}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">• {b.services?.tipo}</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-medium">R$ {Number(b.services?.preco || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-primary">R$ {Number(b.services?.preco || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                         <StatusBadge status={b.status} />
                       </div>
                     </div>

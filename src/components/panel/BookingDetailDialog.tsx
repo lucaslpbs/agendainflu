@@ -87,7 +87,7 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span>Agendamento</span>
