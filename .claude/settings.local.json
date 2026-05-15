@@ -72,7 +72,11 @@
       "Read(//mnt/c/Users/gabri/AppData/Local/Temp/claude/c--Users-gabri-source-repos-agendainflu/682d2c08-d48a-4d92-9ba3-791637723b4c/tasks/**)",
       "Bash(cd /mnt/c/Users/gabri/source/repos/agendainflu && npx tsc --noEmit 2>&1)",
       "Read(//mnt/c/Users/gabri/source/repos/**)",
-      "PowerShell(npx tsc --noEmit 2>&1)"
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "Bash(mkdir \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\completar-cadastro\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\gabri\\source\\repos\\agendainflu\\src\\app"
     ]
   },
   "disabledMcpjsonServers": [

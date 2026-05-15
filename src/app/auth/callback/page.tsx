@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/integrations/supabase/client'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [message, setMessage] = useState('Verificando...')
   const [isError, setIsError] = useState(false)
 
@@ -28,25 +29,36 @@ export default function AuthCallbackPage() {
       return
     }
 
-    // Supabase lida com o hash automaticamente via onAuthStateChange
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Buscar role para redirecionar corretamente
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Verificar se usuário já tem role
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
 
-        const role = roleData?.role
-        if (role === 'admin') router.push('/admin')
-        else if (role === 'influencer') router.push('/painel')
-        else router.push('/cliente/explorar')
+          const role = roleData?.role
+
+          // Usuário novo — não tem role ainda
+          if (!role) {
+            // Pegar o tipo passado na URL (cliente ou influencer)
+            const tipo = searchParams.get('tipo') || 'cliente'
+            router.push(`/completar-cadastro?tipo=${tipo}`)
+            return
+          }
+
+          // Usuário existente — redirecionar normalmente
+          if (role === 'admin') router.push('/admin')
+          else if (role === 'influencer') router.push('/painel')
+          else router.push('/cliente/explorar')
+        }
       }
-    })
+    )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, searchParams])
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -55,7 +67,9 @@ export default function AuthCallbackPage() {
           <>
             <div className="text-4xl">⚠️</div>
             <p className="text-lg font-medium text-destructive">{message}</p>
-            <p className="text-sm text-muted-foreground">Redirecionando para o login...</p>
+            <p className="text-sm text-muted-foreground">
+              Redirecionando para o login...
+            </p>
           </>
         ) : (
           <>
