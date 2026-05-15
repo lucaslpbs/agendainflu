@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,11 +30,14 @@ const getStepIndex = (status: string) => {
 
 export const ClientBookings = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("todos");
   const [reviewBooking, setReviewBooking] = useState<any | null>(null);
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
+  const [cancelingBooking, setCancelingBooking] = useState<any | null>(null)
+  const [canceling, setCanceling] = useState(false)
 
   useEffect(() => {
     if (!user) return;
@@ -107,6 +111,48 @@ export const ClientBookings = () => {
       .filter((b) => b.status === "confirmado" || b.status === "concluido")
       .reduce((s, b) => s + (b.services?.preco || 0), 0),
   };
+
+  const handleCancel = async () => {
+    if (!cancelingBooking) return
+    setCanceling(true)
+    try {
+      const token = typeof window !== 'undefined'
+        ? localStorage.getItem('agenda-token') : null
+      const res = await fetch(`/api/bookings/${cancelingBooking.id}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        },
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erro ao cancelar')
+      }
+      setBookings(prev => prev.map(b =>
+        b.id === cancelingBooking.id ? { ...b, status: 'cancelado' } : b
+      ))
+      toast.success('Agendamento cancelado.')
+      setCancelingBooking(null)
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao cancelar')
+    } finally {
+      setCanceling(false)
+    }
+  }
+
+  const handleReagendar = (b: any) => {
+    const username = b.influencers?.username
+    if (!username) return
+    const params = new URLSearchParams({
+      service: b.service_id || '',
+      descricao: b.descricao_produto || '',
+      link: b.link_negocio || '',
+      observacoes: b.observacoes || '',
+      reagendando: b.id,
+    })
+    router.push(`/agendar/${username}?${params.toString()}`)
+  }
 
   const serviceLabels: Record<string, string> = {
     stories: "Stories", reels: "Reels", reels_stories: "Reels + Stories", feed: "Feed", presencial: "Presencial",
@@ -211,6 +257,25 @@ export const ClientBookings = () => {
                           </Button>
                         )
                       )}
+                      {(b.status === "pendente" || b.status === "confirmado") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive"
+                          onClick={() => setCancelingBooking(b)}
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                      {(b.status === "cancelado") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReagendar(b)}
+                        >
+                          Reagendar
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -260,6 +325,43 @@ export const ClientBookings = () => {
           </div>
         )}
       </div>
+
+      {/* Modal confirmação cancelamento cliente */}
+      {cancelingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-card rounded-2xl border border-border p-6 max-w-sm w-full space-y-4 shadow-xl">
+            <h3 className="font-bold text-lg">Cancelar agendamento?</h3>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja cancelar o agendamento com{" "}
+              <strong>{cancelingBooking.influencers?.nome}</strong>?
+              {cancelingBooking.status === "confirmado" && (
+                <span className="block mt-2 text-destructive font-medium">
+                  ⚠️ Este agendamento já foi confirmado.
+                  Entre em contato com a influenciadora para solicitar o estorno.
+                </span>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleCancel}
+                disabled={canceling}
+              >
+                {canceling ? "Cancelando..." : "Sim, cancelar"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setCancelingBooking(null)}
+                disabled={canceling}
+              >
+                Não, voltar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!reviewBooking} onOpenChange={(open) => { if (!open) setReviewBooking(null); }}>
         <DialogContent>

@@ -32,6 +32,7 @@ const NOTIFY_ENDPOINT = "/api/bookings/notify-whatsapp";
 const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Props) => {
   const { influencer } = useAuth();
   const [sending, setSending] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false)
 
   if (!booking) return null;
 
@@ -214,40 +215,78 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
           <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
             {b.status === "pendente" && onUpdateStatus && (
               <>
-                <Button size="sm" className="gap-1.5" onClick={() => { onUpdateStatus(b.id, "confirmado"); onOpenChange(false); }}>
+                <Button size="sm" className="gap-1.5"
+                  onClick={() => { onUpdateStatus(b.id, "confirmado"); onOpenChange(false); }}>
                   <Check size={14} /> Confirmar
                 </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { onUpdateStatus(b.id, "cancelado"); onOpenChange(false); }}>
+                <Button variant="destructive" size="sm" className="gap-1.5"
+                  onClick={() => setCancelConfirm(true)}>
                   <X size={14} /> Recusar
                 </Button>
               </>
             )}
             {b.status === "confirmado" && onUpdateStatus && (
-              <Button size="sm" className="gap-1.5" onClick={() => { onUpdateStatus(b.id, "concluido"); onOpenChange(false); }}>
-                <Check size={14} /> Concluir
-              </Button>
+              <>
+                <Button size="sm" className="gap-1.5"
+                  onClick={() => { onUpdateStatus(b.id, "concluido"); onOpenChange(false); }}>
+                  <Check size={14} /> Concluir
+                </Button>
+                <Button variant="destructive" size="sm" className="gap-1.5"
+                  onClick={() => setCancelConfirm(true)}>
+                  <X size={14} /> Cancelar/Estornar
+                </Button>
+              </>
             )}
             {b.clients?.whatsapp && (
-              <a href={`https://wa.me/${b.clients.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+              <a href={`https://wa.me/${b.clients.whatsapp.replace(/\D/g, "")}`}
+                 target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="gap-1.5 text-green-600">
                   <MessageCircle size={14} /> WhatsApp
                 </Button>
               </a>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleSendWhatsApp}
-              disabled={sending}
-            >
-              {sending ? (
-                <><Loader2 size={14} className="animate-spin" /> Enviando...</>
-              ) : (
-                <><Send size={14} /> Enviar via WhatsApp</>
-              )}
+            <Button variant="outline" size="sm" className="gap-1.5"
+              onClick={handleSendWhatsApp} disabled={sending}>
+              {sending
+                ? <><Loader2 size={14} className="animate-spin" /> Enviando...</>
+                : <><Send size={14} /> Enviar via WhatsApp</>
+              }
             </Button>
           </div>
+
+          {/* Modal de confirmação de cancelamento */}
+          {cancelConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-card rounded-2xl border border-border p-6 max-w-sm mx-4 space-y-4 shadow-xl">
+                <h3 className="font-bold text-lg">Cancelar agendamento?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Tem certeza que deseja cancelar este agendamento?
+                  Lembre-se de realizar a <strong>devolução do valor</strong> ao cliente
+                  caso o pagamento já tenha sido efetuado.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      onUpdateStatus?.(b.id, "cancelado")
+                      setCancelConfirm(false)
+                      onOpenChange(false)
+                    }}
+                  >
+                    Sim, cancelar e estornar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setCancelConfirm(false)}
+                  >
+                    Não, voltar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

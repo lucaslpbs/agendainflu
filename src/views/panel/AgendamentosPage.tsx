@@ -19,6 +19,7 @@ const AgendamentosPage = () => {
   const { influencer } = useAuth();
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingWithRelations | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null)
 
   const { data: bookings = [], isLoading } = useBookings(statusFilter ? { status: statusFilter } : undefined);
   const updateStatus = useUpdateBookingStatus();
@@ -90,10 +91,16 @@ const AgendamentosPage = () => {
                       <StatusBadge status={b.status} />
                       {b.status === "pendente" && (
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700" onClick={() => handleUpdateStatus(b.id, "confirmado")} title="Confirmar">
+                          <Button size="icon" variant="ghost"
+                            className="h-8 w-8 text-green-600 hover:text-green-700"
+                            onClick={() => handleUpdateStatus(b.id, "confirmado")}
+                            title="Confirmar">
                             <Check size={16} />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive/80" onClick={() => handleUpdateStatus(b.id, "cancelado")} title="Cancelar">
+                          <Button size="icon" variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive/80"
+                            onClick={() => setCancelingId(b.id)}
+                            title="Cancelar">
                             <X size={16} />
                           </Button>
                         </div>
@@ -111,6 +118,39 @@ const AgendamentosPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal confirmação cancelamento */}
+      {cancelingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 max-w-sm mx-4 space-y-4 shadow-xl">
+            <h3 className="font-bold text-lg">Cancelar agendamento?</h3>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja cancelar? Lembre-se de realizar a{" "}
+              <strong>devolução do valor</strong> ao cliente caso o pagamento
+              já tenha sido efetuado.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  handleUpdateStatus(cancelingId, "cancelado")
+                  setCancelingId(null)
+                }}
+              >
+                Sim, cancelar e estornar
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setCancelingId(null)}
+              >
+                Não, voltar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BookingDetailDialog
         booking={selectedBooking}

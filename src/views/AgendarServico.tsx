@@ -23,6 +23,10 @@ const AgendarServico = () => {
   const username = params?.username as string;
   const searchParams = useSearchParams();
   const selectedServiceId = searchParams.get("service");
+  const reagendandoId = searchParams.get('reagendando')
+  const preDescricao = searchParams.get('descricao') || ''
+  const preLink = searchParams.get('link') || ''
+  const preObservacoes = searchParams.get('observacoes') || ''
   const { user } = useAuth();
   const router = useRouter();
 
@@ -71,6 +75,9 @@ const AgendarServico = () => {
       setExistingClient(ec);
 
       if (selectedServiceId) setSelectedService(selectedServiceId);
+      if (preDescricao) setDescricaoProduto(preDescricao);
+      if (preLink) setLinkNegocio(preLink);
+      if (preObservacoes) setObservacoes(preObservacoes);
       setLoading(false);
     };
     fetchAll();
@@ -317,6 +324,11 @@ const AgendarServico = () => {
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
               Agendar com <span className="text-primary">{influencer.nome}</span>
             </h1>
+            {reagendandoId && (
+              <p className="text-sm text-primary bg-primary/10 inline-flex items-center gap-1 px-3 py-1 rounded-full mb-2">
+                🔄 Reagendamento — dados anteriores pré-preenchidos
+              </p>
+            )}
             {!existingClient && (
               <p className="text-sm text-accent bg-accent/10 inline-flex items-center gap-1 px-3 py-1 rounded-full">
                 <Clock size={14} /> Primeiro agendamento — sujeito a aprovação
