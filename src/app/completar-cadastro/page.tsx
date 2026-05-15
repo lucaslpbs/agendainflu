@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ const formatCNPJ = (v: string) => {
   return n.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2')
 }
 
-export default function CompletarCadastroPage() {
+function CompletarCadastroInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tipo = searchParams.get('tipo') || 'cliente'
@@ -337,5 +337,17 @@ export default function CompletarCadastroPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function CompletarCadastroPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#FF2D87] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <CompletarCadastroInner />
+    </Suspense>
   )
 }
