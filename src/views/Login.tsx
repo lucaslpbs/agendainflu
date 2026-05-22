@@ -1,20 +1,26 @@
 'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Zap, Mail, Lock, ArrowRight } from "lucide-react";
 
-const Login = () => {
+const LoginInner = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const redirectByRole = (role: string) => {
+    if (redirectTo && redirectTo.startsWith('/')) {
+      router.push(redirectTo);
+      return;
+    }
     if (role === "admin") {
       router.push("/admin");
     } else if (role === "influencer") {
@@ -62,10 +68,11 @@ const Login = () => {
 
   const handleGoogleLogin = async (tipo: 'cliente' | 'influencer') => {
     setLoading(true);
+    const redirect = searchParams.get('redirect') || ''
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?tipo=${tipo}`,
+        redirectTo: `${window.location.origin}/auth/callback?tipo=${tipo}${redirect ? '&redirect=' + encodeURIComponent(redirect) : ''}`,
       },
     });
     if (error) {
@@ -222,5 +229,15 @@ const Login = () => {
     </div>
   );
 };
+
+const Login = () => (
+  <Suspense fallback={
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0A0A0F" }}>
+      <div className="w-8 h-8 border-2 border-[#FF2D87] border-t-transparent rounded-full animate-spin" />
+    </div>
+  }>
+    <LoginInner />
+  </Suspense>
+);
 
 export default Login;

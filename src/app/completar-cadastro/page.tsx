@@ -134,7 +134,10 @@ function CompletarCadastroInner() {
 
       toast.success('Cadastro concluído! Bem-vindo(a)!')
 
-      if (role === 'influencer') router.push('/painel')
+      const redirect = searchParams.get('redirect') || ''
+      if (redirect && redirect.startsWith('/')) {
+        router.push(redirect)
+      } else if (role === 'influencer') router.push('/painel')
       else router.push('/cliente/explorar')
 
     } catch (err: any) {

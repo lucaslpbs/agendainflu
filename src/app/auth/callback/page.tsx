@@ -43,14 +43,17 @@ function AuthCallbackInner() {
 
           // Usuário novo — não tem role ainda
           if (!role) {
-            // Pegar o tipo passado na URL (cliente ou influencer)
             const tipo = searchParams.get('tipo') || 'cliente'
-            router.push(`/completar-cadastro?tipo=${tipo}`)
+            const redirect = searchParams.get('redirect') || ''
+            router.push(`/completar-cadastro?tipo=${tipo}${redirect ? '&redirect=' + encodeURIComponent(redirect) : ''}`)
             return
           }
 
           // Usuário existente — redirecionar normalmente
-          if (role === 'admin') router.push('/admin')
+          const redirect = searchParams.get('redirect') || ''
+          if (redirect && redirect.startsWith('/')) {
+            router.push(redirect)
+          } else if (role === 'admin') router.push('/admin')
           else if (role === 'influencer') router.push('/painel')
           else router.push('/cliente/explorar')
         }
