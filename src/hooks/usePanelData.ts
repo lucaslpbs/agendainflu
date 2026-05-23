@@ -39,6 +39,15 @@ export function useUpdateBookingStatus() {
   })
 }
 
+export function useCompleteBooking() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch('/api/bookings/' + id + '/complete', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookings'] }),
+  })
+}
+
 // ── Services ──────────────────────────────────────────────────────────────────
 
 export function useServices() {

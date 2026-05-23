@@ -9,14 +9,19 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft, Upload, X, Image } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft, Upload, X, Image, CreditCard, Loader2 } from "lucide-react";
 import { format, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
 
 const serviceLabels: Record<string, string> = {
   stories: "Stories", reels: "Reels", reels_stories: "Reels + Stories", feed: "Feed", presencial: "Presencial",
 };
+
+if (process.env.NEXT_PUBLIC_MP_PUBLIC_KEY) {
+  initMercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, { locale: 'pt-BR' });
+}
 
 const AgendarServico = () => {
   const params = useParams();
@@ -38,6 +43,12 @@ const AgendarServico = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [bookingCode, setBookingCode] = useState("");
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [preferenceId, setPreferenceId] = useState<string | null>(null);
+  const [sandboxInitPoint, setSandboxInitPoint] = useState<string | null>(null);
+  const [isSandbox, setIsSandbox] = useState(false);
+  const [preferenceLoading, setPreferenceLoading] = useState(false);
+  const [priceClient, setPriceClient] = useState(0);
 
   const [selectedService, setSelectedService] = useState(selectedServiceId || "");
   const [selectedDate, setSelectedDate] = useState("");
@@ -196,15 +207,35 @@ const AgendarServico = () => {
         throw new Error(err.error || 'Erro ao agendar');
       }
       const { booking } = await res.json();
-
       setBookingCode(booking.codigo_confirmacao);
-      setSuccess(true);
+      setBookingId(booking.id);
 
-      if (existingClient?.status === 'ativo') {
-        toast.success("Agendamento confirmado! Envie o comprovante pelo WhatsApp.");
-      } else {
-        toast.success("Agendamento enviado! Aguarde a aprovação da influenciadora.");
+      // Create MP payment preference
+      setPreferenceLoading(true);
+      try {
+        const prefRes = await fetch('/api/payments/create-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+          },
+          body: JSON.stringify({ booking_id: booking.id }),
+        });
+        if (prefRes.ok) {
+          const prefData = await prefRes.json();
+          setPreferenceId(prefData.preference_id);
+          setSandboxInitPoint(prefData.sandbox_init_point);
+          setIsSandbox(prefData.is_sandbox);
+          setPriceClient(prefData.price_client);
+        }
+      } catch (prefErr) {
+        console.error('MP preference error:', prefErr);
+      } finally {
+        setPreferenceLoading(false);
       }
+
+      setSuccess(true);
+      toast.success("Agendamento criado! Realize o pagamento para confirmar.");
     } catch (err: any) {
       toast.error(err.message || "Erro ao agendar");
     } finally {
@@ -263,46 +294,65 @@ const AgendarServico = () => {
   // chosenService already defined above
 
   if (success) {
-    const whatsappMsg = encodeURIComponent(
-      `Olá ${influencer.nome}! 🎉\n\nAcabei de agendar um serviço na AgendaInflu.\n\n📋 Código: ${bookingCode}\n📅 Data: ${selectedDate ? format(parseISO(selectedDate), "dd/MM/yyyy") : ""}\n🎬 Serviço: ${chosenService ? serviceLabels[chosenService.tipo] : ""}\n💰 Valor: R$ ${chosenService ? Number(chosenService.preco).toFixed(2) : ""}\n\n${existingClient?.status === "ativo" ? "Segue meu comprovante de pagamento:" : "Aguardo aprovação para prosseguir com o pagamento!"}`
-    );
+    const precoOriginal = chosenService ? Number(chosenService.preco) : 0;
+    const precoExibido = priceClient || parseFloat((precoOriginal * 1.10).toFixed(2));
+    const taxa = parseFloat((precoExibido - precoOriginal).toFixed(2));
 
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center pt-16">
-          <div className="container max-w-md text-center">
-            <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
-              <CheckCircle2 size={48} className="mx-auto text-primary mb-4" />
-              <h2 className="text-2xl font-bold mb-2">
-                {existingClient?.status === "ativo" ? "Agendamento Confirmado!" : "Agendamento Enviado!"}
-              </h2>
-              <p className="text-muted-foreground text-sm mb-2">
-                Código: <span className="font-mono font-bold text-foreground">{bookingCode}</span>
-              </p>
-
-              {existingClient?.status === "ativo" ? (
-                <p className="text-sm text-muted-foreground mb-6">
-                  Envie o comprovante de pagamento pelo WhatsApp para confirmar.
+          <div className="container max-w-md">
+            <div className="bg-card rounded-2xl border border-border p-8 shadow-sm space-y-6">
+              <div className="text-center">
+                <CreditCard size={48} className="mx-auto text-primary mb-4" />
+                <h2 className="text-2xl font-bold mb-1">Confirme o pagamento</h2>
+                <p className="text-muted-foreground text-sm">
+                  Código: <span className="font-mono font-bold text-foreground">{bookingCode}</span>
                 </p>
+              </div>
+
+              {/* Price breakdown */}
+              <div className="bg-secondary/50 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Serviço ({chosenService ? serviceLabels[chosenService.tipo] : ''})</span>
+                  <span>R$ {precoOriginal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Taxa de serviço (10%)</span>
+                  <span>R$ {taxa.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
+                  <span>Total</span>
+                  <span className="text-primary">R$ {precoExibido.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* MP Wallet button */}
+              {preferenceLoading ? (
+                <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground text-sm">
+                  <Loader2 size={18} className="animate-spin" />
+                  Carregando pagamento...
+                </div>
+              ) : preferenceId && !isSandbox ? (
+                <div>
+                  <Wallet initialization={{ preferenceId }} />
+                </div>
+              ) : sandboxInitPoint ? (
+                <a href={sandboxInitPoint} target="_blank" rel="noopener noreferrer" className="block">
+                  <Button className="w-full" size="lg">
+                    <CreditCard size={18} className="mr-2" /> Pagar agora (Sandbox)
+                  </Button>
+                </a>
               ) : (
-                <p className="text-sm text-muted-foreground mb-6">
-                  Aguarde a aprovação da influenciadora. Você será notificado quando for aprovado.
+                <p className="text-sm text-center text-muted-foreground">
+                  Configure a chave do Mercado Pago para habilitar o pagamento online.
                 </p>
               )}
 
-              <div className="flex flex-col gap-3">
-                {influencer.whatsapp && (
-                  <a href={`https://wa.me/${influencer.whatsapp.replace(/\D/g, "")}?text=${whatsappMsg}`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="gold" size="lg" className="w-full flex items-center gap-2">
-                      <MessageCircle size={18} /> Enviar pelo WhatsApp
-                    </Button>
-                  </a>
-                )}
-                <Button variant="outline" asChild>
-                  <Link href="/cliente">Ver meus agendamentos</Link>
-                </Button>
-              </div>
+              <Button variant="outline" asChild className="w-full">
+                <Link href="/cliente">Ver meus agendamentos</Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -461,23 +511,36 @@ const AgendarServico = () => {
             </div>
 
             {/* Summary */}
-            {chosenService && selectedDate && (
-              <div className="bg-secondary/50 rounded-xl p-4 space-y-2">
-                <h4 className="text-sm font-semibold">Resumo do agendamento</h4>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Serviço</span>
-                  <span className="font-medium">{serviceLabels[chosenService.tipo]}</span>
+            {chosenService && selectedDate && (() => {
+              const precoBase = Number(chosenService.preco);
+              const precoTotal = parseFloat((precoBase * 1.10).toFixed(2));
+              const taxaServico = parseFloat((precoTotal - precoBase).toFixed(2));
+              return (
+                <div className="bg-secondary/50 rounded-xl p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">Resumo do agendamento</h4>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Serviço</span>
+                    <span className="font-medium">{serviceLabels[chosenService.tipo]}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Data</span>
+                    <span className="font-medium">{format(parseISO(selectedDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Serviço</span>
+                    <span>R$ {precoBase.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Taxa de serviço</span>
+                    <span>R$ {taxaServico.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-border">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold text-primary text-lg">R$ {precoTotal.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Data</span>
-                  <span className="font-medium">{format(parseISO(selectedDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-border">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold text-primary text-lg">R$ {Number(chosenService.preco).toFixed(2)}</span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             <Button variant="hero" size="lg" className="w-full" disabled={submitting || uploadingFiles || !selectedService || !selectedDate}>
               {uploadingFiles ? "Enviando arquivos..." : submitting ? "Agendando..." : existingClient?.status === "ativo" ? "Confirmar e Pagar" : "Enviar para aprovação"}

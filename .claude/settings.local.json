@@ -73,7 +73,9 @@
       "Bash(cd /mnt/c/Users/gabri/source/repos/agendainflu && npx tsc --noEmit 2>&1)",
       "Read(//mnt/c/Users/gabri/source/repos/**)",
       "PowerShell(npx tsc --noEmit 2>&1)",
-      "Bash(mkdir \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\completar-cadastro\")"
+      "Bash(mkdir \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\completar-cadastro\")",
+      "Bash(npm list *)",
+      "Bash(node -e \"const mp = require\\('mercadopago'\\); console.log\\(Object.keys\\(mp\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\gabri\\source\\repos\\agendainflu\\src\\app"

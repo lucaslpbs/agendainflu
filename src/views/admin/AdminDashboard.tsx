@@ -35,7 +35,7 @@ const CHART_COLORS = {
 }
 
 export const AdminDashboard = () => {
-  const [stats, setStats] = useState({ influencers: 0, emAnalise: 0, bookings: 0, clients: 0, waitlist: 0, receita: 0 });
+  const [stats, setStats] = useState({ influencers: 0, emAnalise: 0, bookings: 0, clients: 0, waitlist: 0, receita: 0, volumeTotal: 0, comissaoRetida: 0, emCustodia: 0 });
   const [bookings, setBookings] = useState<any[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
@@ -99,6 +99,22 @@ export const AdminDashboard = () => {
   return (
     <AdminLayout title="Dashboard">
       <div className="space-y-8">
+        {/* Payment financial metrics */}
+        <div className="grid sm:grid-cols-3 gap-4">
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-xs text-muted-foreground mb-1">Volume Total Processado (MP)</p>
+            <p className="text-2xl font-bold text-primary">R$ {stats.volumeTotal.toFixed(2)}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-xs text-muted-foreground mb-1">Em Custódia (aguard. conclusão)</p>
+            <p className="text-2xl font-bold text-yellow-600">R$ {stats.emCustodia.toFixed(2)}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-xs text-muted-foreground mb-1">Comissão Retida (plataforma)</p>
+            <p className="text-2xl font-bold text-green-600">R$ {stats.comissaoRetida.toFixed(2)}</p>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((c) => (
