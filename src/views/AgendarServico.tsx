@@ -210,8 +210,9 @@ const AgendarServico = () => {
       setBookingCode(booking.codigo_confirmacao);
       setBookingId(booking.id);
 
-      // Create MP payment preference
+      // Create MP payment preference — se falhar, cancela o booking e aborta
       setPreferenceLoading(true);
+      let preferenceOk = false;
       try {
         const prefRes = await fetch('/api/payments/create-preference', {
           method: 'POST',
@@ -221,21 +222,35 @@ const AgendarServico = () => {
           },
           body: JSON.stringify({ booking_id: booking.id }),
         });
-        if (prefRes.ok) {
-          const prefData = await prefRes.json();
-          setPreferenceId(prefData.preference_id);
-          setSandboxInitPoint(prefData.sandbox_init_point);
-          setIsSandbox(prefData.is_sandbox);
-          setPriceClient(prefData.price_client);
+
+        if (!prefRes.ok) {
+          const prefErr = await prefRes.json().catch(() => ({}));
+          throw new Error(prefErr.error || 'Erro ao iniciar pagamento');
         }
-      } catch (prefErr) {
-        console.error('MP preference error:', prefErr);
+
+        const prefData = await prefRes.json();
+        setPreferenceId(prefData.preference_id);
+        setSandboxInitPoint(prefData.sandbox_init_point);
+        setIsSandbox(prefData.is_sandbox);
+        setPriceClient(prefData.price_client);
+        preferenceOk = true;
+      } catch (prefErr: any) {
+        // Abortar o booking para não ocupar a vaga
+        try {
+          await fetch(`/api/bookings/${booking.id}/abort`, {
+            method: 'DELETE',
+            headers: { ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+          });
+        } catch {}
+        throw new Error(prefErr.message || 'Erro ao iniciar pagamento. Tente novamente.');
       } finally {
         setPreferenceLoading(false);
       }
 
-      setSuccess(true);
-      toast.success("Agendamento criado! Realize o pagamento para confirmar.");
+      if (preferenceOk) {
+        setSuccess(true);
+        toast.success("Agendamento criado! Realize o pagamento para confirmar.");
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao agendar");
     } finally {
