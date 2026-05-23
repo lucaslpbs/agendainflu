@@ -37,6 +37,13 @@ const CadastroCliente = () => {
     setLoading(true);
 
     try {
+      // Salvar redirect no localStorage para recuperar após confirmação
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        const redirect = urlParams.get('redirect')
+        if (redirect) localStorage.setItem('post-auth-redirect', redirect)
+      }
+
       // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
@@ -48,8 +55,12 @@ const CadastroCliente = () => {
             authError.message.includes('already registered')) {
           throw new Error('Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.')
         }
-        if (authError.message.includes('Password should be')) {
-          throw new Error('A senha deve ter no mínimo 6 caracteres.')
+        if (
+          authError.message.includes('Password should be') ||
+          authError.message.includes('should contain at least one character') ||
+          authError.message.includes('Password should contain')
+        ) {
+          throw new Error('A senha deve ter letras maiúsculas, minúsculas e números. Ex: Senha123')
         }
         if (authError.message.includes('Invalid email')) {
           throw new Error('E-mail inválido. Verifique e tente novamente.')

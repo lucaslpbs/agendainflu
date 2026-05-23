@@ -50,8 +50,11 @@ function AuthCallbackInner() {
           }
 
           // Usuário existente — redirecionar normalmente
-          const redirect = searchParams.get('redirect') || ''
+          const redirect = searchParams.get('redirect') ||
+            (typeof window !== 'undefined' ? localStorage.getItem('post-auth-redirect') : '') || ''
+
           if (redirect && redirect.startsWith('/')) {
+            if (typeof window !== 'undefined') localStorage.removeItem('post-auth-redirect')
             router.push(redirect)
           } else if (role === 'admin') router.push('/admin')
           else if (role === 'influencer') router.push('/painel')

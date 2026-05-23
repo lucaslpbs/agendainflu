@@ -73,11 +73,13 @@ const InfluencerProfile = () => {
 
   const handleAgendar = (serviceId?: string) => {
     if (!user) {
-      toast("Você precisa estar logado para agendar um serviço.");
-      router.push("/login");
+      const destination = `/agendar/${username}${serviceId ? `?service=${serviceId}` : ""}`
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('post-auth-redirect', destination)
+      }
+      router.push(`/login?redirect=${encodeURIComponent(destination)}`);
       return;
     }
-    // Navigate to booking page with context
     router.push(`/agendar/${username}${serviceId ? `?service=${serviceId}` : ""}`);
   };
 
@@ -213,10 +215,8 @@ const InfluencerProfile = () => {
                       <Calendar size={18} className="mr-1" /> Agendar Serviço
                     </Button>
                   ) : (
-                    <Button variant="hero" size="lg" asChild>
-                      <Link href="/login">
-                        <Lock size={18} className="mr-1" /> Entrar para Agendar
-                      </Link>
+                    <Button variant="hero" size="lg" onClick={() => handleAgendar()}>
+                      <Lock size={18} className="mr-1" /> Entrar para Agendar
                     </Button>
                   )}
                 </div>
@@ -326,10 +326,9 @@ const InfluencerProfile = () => {
                     <Calendar size={14} className="mr-1" /> Agendar este serviço
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href="/login">
-                      <Lock size={14} className="mr-1" /> Entrar para ver preço e agendar
-                    </Link>
+                  <Button variant="outline" size="sm" className="w-full"
+                    onClick={() => handleAgendar(s.id)}>
+                    <Lock size={14} className="mr-1" /> Entrar para ver preço e agendar
                   </Button>
                 )}
               </div>
@@ -362,13 +361,17 @@ const InfluencerProfile = () => {
           <div className="flex flex-wrap gap-3 justify-center">
             {!isLoggedIn ? (
               <>
-                <Button variant="hero" size="lg" asChild>
-                  <Link href="/cadastro-cliente">
-                    <Building2 size={18} className="mr-1" /> Criar conta empresarial
-                  </Link>
+                <Button variant="hero" size="lg" onClick={() => {
+                  const destination = `/agendar/${username}`
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('post-auth-redirect', destination)
+                  }
+                  router.push(`/cadastro-cliente?redirect=${encodeURIComponent(destination)}`)
+                }}>
+                  <Building2 size={18} className="mr-1" /> Criar conta empresarial
                 </Button>
-                <Button variant="outline" size="lg" asChild>
-                  <Link href="/login">Já tenho conta</Link>
+                <Button variant="outline" size="lg" onClick={() => handleAgendar()}>
+                  Já tenho conta
                 </Button>
               </>
             ) : (
@@ -431,8 +434,6 @@ const InfluencerProfile = () => {
   );
 };
 
-// Need toast import
-import { toast } from "sonner";
 import { Building2 } from "lucide-react";
 import dynamic from 'next/dynamic'
 const InstagramFeed = dynamic(() => import('@/components/profile/InstagramFeed'), { ssr: false })
