@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard, Users, UserCheck, ClipboardList, Clock, LogOut, Menu, X
+  LayoutDashboard, Users, UserCheck, ClipboardList, Clock, LogOut, Menu, X, CreditCard, TrendingUp
 } from "lucide-react";
 
 export const AdminLayout = ({ children, title }: { children: React.ReactNode; title: string }) => {
@@ -19,6 +19,8 @@ export const AdminLayout = ({ children, title }: { children: React.ReactNode; ti
     { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
     { label: "Influenciadoras", icon: UserCheck, path: "/admin/influenciadoras" },
     { label: "Agendamentos", icon: ClipboardList, path: "/admin/agendamentos" },
+    { label: "Pagamentos", icon: CreditCard, path: "/admin/pagamentos" },
+    { label: "Financeiro", icon: TrendingUp, path: "/admin/financeiro" },
     { label: "Clientes", icon: Users, path: "/admin/clientes" },
     { label: "Lista de Espera", icon: Clock, path: "/admin/lista-espera" },
   ];

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Calendar, ClipboardList, Briefcase, Users, Clock, UserCircle, LogOut, Menu, X
+  LayoutDashboard, Calendar, ClipboardList, Briefcase, Users, Clock, UserCircle, LogOut, Menu, X, DollarSign
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/painel" },
   { label: "Calendário", icon: Calendar, path: "/painel/calendario" },
   { label: "Agendamentos", icon: ClipboardList, path: "/painel/agendamentos" },
+  { label: "Financeiro", icon: DollarSign, path: "/painel/financeiro" },
   { label: "Serviços", icon: Briefcase, path: "/painel/servicos" },
   { label: "Clientes", icon: Users, path: "/painel/clientes" },
   { label: "Lista de Espera", icon: Clock, path: "/painel/lista-espera" },
