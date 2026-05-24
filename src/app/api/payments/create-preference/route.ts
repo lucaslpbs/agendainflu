@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
-import { mpPreference, calcPrecos, isSandbox } from '@/lib/mercadopago'
+import { mpClientForSeller, mpPreference, calcPrecos, isSandbox } from '@/lib/mercadopago'
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const { data: booking } = await db
       .from('bookings')
-      .select('*, clients(*), services(*), influencers(*)')
+      .select('*, clients(*), services(*), influencers(*, mp_access_token, mp_connected, mp_user_id)')
       .eq('id', booking_id)
       .in('client_id', clientIds)
       .maybeSingle()
@@ -79,7 +79,13 @@ export async function POST(req: NextRequest) {
       expiration_date_to: expiresAt,
     }
 
-    const preference = await mpPreference.create({ body: preferenceData })
+    // Use seller's token if connected (split de pagamentos 1:1)
+    // Fall back to platform token for backward compatibility / testing
+    const influencer = (booking as any).influencers
+    const sellerToken: string | null = influencer?.mp_connected ? influencer.mp_access_token : null
+    const preferenceClient = sellerToken ? mpClientForSeller(sellerToken).preference : mpPreference
+
+    const preference = await preferenceClient.create({ body: preferenceData })
 
     // Persist preference data and calculated prices
     await db
@@ -90,6 +96,7 @@ export async function POST(req: NextRequest) {
         price_client: precoCliente,
         platform_fee: comissaoPlataforma,
         mp_fee: taxaMP,
+        influencer_mp_id: influencer?.mp_user_id || null,
       } as any)
       .eq('id', booking_id)
 

@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/apiFetch";
 import { toast } from "sonner";
-import { Upload, Instagram, CheckCircle2, AlertCircle, Loader2, X, ImagePlus } from "lucide-react";
+import { Upload, Instagram, CheckCircle2, AlertCircle, Loader2, X, ImagePlus, CreditCard, Link2Off } from "lucide-react";
 
 const PerfilPage = () => {
   const { influencer, refreshInfluencer } = useAuth();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [mpDisconnecting, setMpDisconnecting] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [photosUploading, setPhotosUploading] = useState(false);
   const [form, setForm] = useState({
@@ -26,7 +27,7 @@ const PerfilPage = () => {
     seguidores: "",
   });
 
-  // Handle instagram OAuth redirect result
+  // Handle OAuth redirect results
   useEffect(() => {
     const igParam = searchParams.get("instagram");
     if (igParam === "conectado") {
@@ -35,7 +36,29 @@ const PerfilPage = () => {
     } else if (igParam === "erro") {
       toast.error("Falha ao conectar Instagram. Tente novamente.");
     }
+
+    const mpParam = searchParams.get("mp");
+    if (mpParam === "conectado") {
+      toast.success("Mercado Pago conectado! Agora os pagamentos são divididos automaticamente.");
+      refreshInfluencer();
+    } else if (mpParam === "erro") {
+      toast.error("Falha ao conectar Mercado Pago. Tente novamente.");
+    }
   }, [searchParams]);
+
+  const handleDisconnectMP = async () => {
+    if (!influencer) return;
+    setMpDisconnecting(true);
+    try {
+      await apiFetch('/api/auth/mercadopago/disconnect', { method: 'POST' });
+      toast.success("Mercado Pago desconectado.");
+      refreshInfluencer();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setMpDisconnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (!influencer) return;
@@ -176,6 +199,10 @@ const PerfilPage = () => {
   const igUsername = (influencer as any)?.instagram_username;
   const igFollowers = (influencer as any)?.instagram_followers_count;
   const igUpdatedAt = (influencer as any)?.instagram_followers_updated_at;
+
+  const mpConnected = (influencer as any)?.mp_connected;
+  const mpUserId = (influencer as any)?.mp_user_id;
+  const mpConnectedAt = (influencer as any)?.mp_connected_at;
 
   return (
     <PanelLayout>
@@ -352,6 +379,65 @@ const PerfilPage = () => {
                   Conectar Instagram ao perfil
                 </Button>
               </a>
+            </div>
+          )}
+        </div>
+
+        {/* Mercado Pago connection */}
+        <div className={`bg-card rounded-xl border p-6 ${mpConnected ? "border-green-500/40" : "border-yellow-500/40"}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${mpConnected ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
+                <CreditCard size={20} className={mpConnected ? "text-green-500" : "text-yellow-600"} />
+              </div>
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  Mercado Pago
+                  {mpConnected && (
+                    <span className="text-xs font-medium text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 size={11} /> Conectado
+                    </span>
+                  )}
+                </h3>
+                {mpConnected ? (
+                  <p className="text-sm text-muted-foreground">
+                    ID: <span className="font-mono text-xs">{mpUserId}</span>
+                    {mpConnectedAt && (
+                      <> · Desde {new Date(mpConnectedAt).toLocaleDateString("pt-BR")}</>
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Conecte sua conta para receber os pagamentos automaticamente via split.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {mpConnected ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
+                disabled={mpDisconnecting}
+                onClick={handleDisconnectMP}
+              >
+                {mpDisconnecting ? <Loader2 size={14} className="animate-spin mr-1" /> : <Link2Off size={14} className="mr-1" />}
+                Desconectar
+              </Button>
+            ) : (
+              <a href="/api/auth/mercadopago/connect">
+                <Button variant="hero" size="sm" className="shrink-0">
+                  <CreditCard size={14} className="mr-1.5" />
+                  Conectar MP
+                </Button>
+              </a>
+            )}
+          </div>
+
+          {!mpConnected && (
+            <div className="mt-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3 text-xs text-muted-foreground">
+              <strong className="text-yellow-600">Importante:</strong> Sem a conexão, os pagamentos vão para a conta da plataforma e são repassados manualmente. Com a conexão, o split é automático — você recebe direto na sua conta MP.
             </div>
           )}
         </div>

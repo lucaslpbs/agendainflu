@@ -49,27 +49,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       mp_response: { note: 'marked_complete_by_influencer', booking_id: params.id },
     })
 
-    // Release funds via MP API (best-effort — manual fallback if it fails)
-    if (booking.mp_payment_id) {
-      try {
-        const releaseRes = await fetch(
-          `https://api.mercadopago.com/v1/advanced_payments/${booking.mp_payment_id}/disbursements/release`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${process.env.MP_MARKETPLACE_ACCESS_TOKEN}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        )
-        if (!releaseRes.ok) {
-          const errBody = await releaseRes.text()
-          console.error('[complete] MP release failed:', releaseRes.status, errBody)
-        }
-      } catch (releaseErr) {
-        console.error('[complete] MP release exception:', releaseErr)
-      }
-    }
+    // Com Split de Pagamentos 1:1, a divisão já ocorre automaticamente no momento do pagamento.
+    // O token do influenciador é usado na criação da preferência, então não há chamada de release manual.
 
     // Notify client
     try {
