@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     const { data: booking } = await db
       .from('bookings')
-      .select('id, payment_status, client_id, influencer_id, codigo_confirmacao, mp_payment_id, influencers(*), clients(*)')
+      .select('id, payment_status, client_id, influencer_id, codigo_confirmacao, mp_payment_id, data_agendada, influencers(*), clients(*), services(*)')
       .eq('id', bookingId)
       .maybeSingle()
 
@@ -91,6 +91,34 @@ export async function POST(req: NextRequest) {
         }
       } catch (waErr) {
         console.error('[webhook] WhatsApp notify error:', waErr)
+      }
+
+      // Dispatch n8n webhook only after payment is confirmed
+      try {
+        const webhookUrl = process.env.N8N_WEBHOOK_NOVO_AGENDAMENTO
+        const infWhatsapp = (booking as any).influencers?.whatsapp
+        if (webhookUrl && infWhatsapp) {
+          const dataFormatada = new Date((booking as any).data_agendada + 'T12:00:00').toLocaleDateString('pt-BR')
+          const servicoPreco = (booking as any).services?.preco ?? transactionAmount
+          const valorFormatado = 'R$ ' + Number(servicoPreco).toFixed(2)
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              evento: 'novo_agendamento',
+              influencer_nome: (booking as any).influencers?.nome,
+              influencer_whatsapp: infWhatsapp,
+              cliente_nome: (booking as any).clients?.nome || 'Cliente',
+              cliente_empresa: (booking as any).clients?.empresa || '',
+              servico_tipo: (booking as any).services?.tipo,
+              data_agendada: dataFormatada,
+              valor: valorFormatado,
+              codigo: (booking as any).codigo_confirmacao,
+            }),
+          })
+        }
+      } catch (n8nErr) {
+        console.error('[webhook] n8n novo_agendamento error:', n8nErr)
       }
     }
 
