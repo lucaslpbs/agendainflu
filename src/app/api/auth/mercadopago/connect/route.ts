@@ -25,12 +25,13 @@ export async function GET(req: NextRequest) {
 
   const redirectUri = `${appUrl}/api/auth/mercadopago/callback`
 
-  const oauthUrl = new URL('https://auth.mercadopago.com/authorization')
+  // Brazil uses .com.br auth domain
+  const oauthUrl = new URL('https://auth.mercadopago.com.br/authorization')
   oauthUrl.searchParams.set('client_id', appId)
   oauthUrl.searchParams.set('response_type', 'code')
   oauthUrl.searchParams.set('platform_id', 'mp')
   oauthUrl.searchParams.set('redirect_uri', redirectUri)
-  oauthUrl.searchParams.set('state', inf.id) // influencer UUID as state
+  oauthUrl.searchParams.set('state', inf.id)
 
   return NextResponse.redirect(oauthUrl.toString())
 }
