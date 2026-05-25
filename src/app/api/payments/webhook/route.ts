@@ -1,7 +1,35 @@
+import { createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { mpPayment } from '@/lib/mercadopago'
 import { sendWhatsApp } from '@/lib/wa'
+
+function validateMpSignature(req: NextRequest, dataId: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) return true // skip if not configured
+
+  const xSignature = req.headers.get('x-signature')
+  const xRequestId = req.headers.get('x-request-id')
+  if (!xSignature) return false
+
+  let ts: string | undefined
+  let v1: string | undefined
+  for (const part of xSignature.split(',')) {
+    const [k, v] = part.split('=')
+    if (k?.trim() === 'ts') ts = v?.trim()
+    if (k?.trim() === 'v1') v1 = v?.trim()
+  }
+  if (!ts || !v1) return false
+
+  const parts: string[] = []
+  if (dataId) parts.push(`id:${dataId}`)
+  if (xRequestId) parts.push(`request-id:${xRequestId}`)
+  if (ts) parts.push(`ts:${ts}`)
+  const manifest = parts.join(';') + ';'
+
+  const computed = createHmac('sha256', secret).update(manifest).digest('hex')
+  return computed === v1
+}
 
 async function logTransaction(
   bookingId: string,
@@ -32,6 +60,11 @@ export async function POST(req: NextRequest) {
 
     const paymentId = data?.id
     if (!paymentId) {
+      return NextResponse.json({ received: true })
+    }
+
+    if (!validateMpSignature(req, String(paymentId))) {
+      console.warn('[webhook] assinatura MP inválida, notificação ignorada')
       return NextResponse.json({ received: true })
     }
 
