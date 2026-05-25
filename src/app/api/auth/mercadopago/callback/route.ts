@@ -13,13 +13,13 @@ export async function GET(req: NextRequest) {
 
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (oauthError || !code || !state || !uuidRegex.test(state)) {
-    console.error('[MP OAuth] invalid params', { oauthError, code: !!code, state })
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro`)
+    console.error('[MP OAuth] invalid params', { oauthError, code: !!code, state, stateValid: state ? uuidRegex.test(state) : false })
+    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=invalid_params`)
   }
 
   if (!appId || !appSecret) {
-    console.error('[MP OAuth] missing env vars')
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro`)
+    console.error('[MP OAuth] missing env vars', { hasAppId: !!appId, hasAppSecret: !!appSecret })
+    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=missing_env`)
   }
 
   try {
@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
 
     if (!tokenRes.ok || !tokenData.access_token) {
       console.error('[MP OAuth] token exchange failed', tokenData)
-      return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro`)
+      const mpErrCode = tokenData?.error || tokenData?.message || 'token_failed'
+      return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=token_exchange&detail=${encodeURIComponent(mpErrCode)}`)
     }
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
