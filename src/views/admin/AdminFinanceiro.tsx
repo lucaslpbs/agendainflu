@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { apiFetch } from "@/lib/apiFetch"
 import { AdminLayout } from "./AdminLayout"
 import { toast } from "sonner"
 import {
   TrendingUp, DollarSign, ArrowDownLeft, ArrowUpRight, Clock,
-  CheckCircle2, CreditCard, Loader2, ExternalLink
+  CheckCircle2, CreditCard, Loader2, ExternalLink, Link2Off, ShieldCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { format, parseISO } from "date-fns"
@@ -23,12 +24,30 @@ interface Resumo {
   lucroTotal: number
 }
 
+interface MpConfig {
+  mp_connected: boolean
+  mp_user_id?: string
+  mp_connected_at?: string
+}
+
 export const AdminFinanceiro = () => {
   const [resumo, setResumo] = useState<Resumo | null>(null)
   const [concluidos, setConcluidos] = useState<any[]>([])
   const [aguardando, setAguardando] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<"concluidos" | "aguardando">("aguardando")
+  const [mpConfig, setMpConfig] = useState<MpConfig | null>(null)
+  const [mpDisconnecting, setMpDisconnecting] = useState(false)
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const mp = searchParams.get('mp')
+    if (mp === 'conectado') toast.success('Conta Mercado Pago conectada com sucesso!')
+    if (mp === 'erro') {
+      const reason = searchParams.get('reason')
+      toast.error(`Falha ao conectar MP${reason ? `: ${reason}` : ''}`)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     apiFetch("/api/admin/financeiro")
@@ -39,7 +58,24 @@ export const AdminFinanceiro = () => {
       })
       .catch(() => toast.error("Erro ao carregar dados financeiros"))
       .finally(() => setLoading(false))
+
+    apiFetch("/api/admin/mp-config")
+      .then((res) => setMpConfig(res))
+      .catch(() => {})
   }, [])
+
+  const handleDisconnectMP = async () => {
+    setMpDisconnecting(true)
+    try {
+      await apiFetch("/api/auth/mercadopago/admin/disconnect", { method: "POST" })
+      setMpConfig({ mp_connected: false })
+      toast.success("Conta Mercado Pago desconectada")
+    } catch {
+      toast.error("Erro ao desconectar")
+    } finally {
+      setMpDisconnecting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -110,6 +146,56 @@ export const AdminFinanceiro = () => {
   return (
     <AdminLayout title="Financeiro — Lucro & Pagamentos">
       <div className="space-y-6">
+        {/* MP Platform connection card */}
+        <div className={`bg-card rounded-xl border p-5 flex items-center justify-between gap-4 ${mpConfig?.mp_connected ? "border-green-500/40" : "border-yellow-500/40"}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ${mpConfig?.mp_connected ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
+              <ShieldCheck size={20} className={mpConfig?.mp_connected ? "text-green-500" : "text-yellow-600"} />
+            </div>
+            <div>
+              <h3 className="font-semibold flex items-center gap-2 text-sm">
+                Conta Marketplace (Plataforma)
+                {mpConfig?.mp_connected && (
+                  <span className="text-xs font-medium text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Conectada
+                  </span>
+                )}
+              </h3>
+              {mpConfig?.mp_connected ? (
+                <p className="text-xs text-muted-foreground">
+                  ID: <span className="font-mono">{mpConfig.mp_user_id}</span>
+                  {mpConfig.mp_connected_at && (
+                    <> · Desde {new Date(mpConfig.mp_connected_at).toLocaleDateString("pt-BR")}</>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Conecte sua conta MP para receber a comissão da plataforma via split de pagamentos
+                </p>
+              )}
+            </div>
+          </div>
+          {mpConfig?.mp_connected ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
+              disabled={mpDisconnecting}
+              onClick={handleDisconnectMP}
+            >
+              {mpDisconnecting ? <Loader2 size={14} className="animate-spin mr-1" /> : <Link2Off size={14} className="mr-1" />}
+              Desconectar
+            </Button>
+          ) : (
+            <a href="/api/auth/mercadopago/admin/connect">
+              <Button variant="hero" size="sm" className="shrink-0">
+                <CreditCard size={14} className="mr-1.5" />
+                Conectar MP
+              </Button>
+            </a>
+          )}
+        </div>
+
         {/* Info banner */}
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3">
           <DollarSign size={18} className="text-primary mt-0.5 shrink-0" />

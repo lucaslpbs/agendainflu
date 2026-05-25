@@ -12,20 +12,24 @@ export async function GET(req: NextRequest) {
   const oauthError = url.searchParams.get('error')
 
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (oauthError || !code || !state || !uuidRegex.test(state)) {
-    console.error('[MP OAuth] invalid params', { oauthError, code: !!code, state, stateValid: state ? uuidRegex.test(state) : false })
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=invalid_params`)
+  const isAdmin = state === 'admin'
+  const isInfluencer = state ? uuidRegex.test(state) : false
+
+  if (oauthError || !code || !state || (!isAdmin && !isInfluencer)) {
+    console.error('[MP OAuth] invalid params', { oauthError, code: !!code, state, isAdmin, isInfluencer })
+    const dest = isAdmin ? `${appUrl}/admin/financeiro?mp=erro` : `${appUrl}/painel/perfil?mp=erro`
+    return NextResponse.redirect(`${dest}&reason=invalid_params`)
   }
 
   if (!appId || !appSecret) {
     console.error('[MP OAuth] missing env vars', { hasAppId: !!appId, hasAppSecret: !!appSecret })
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=missing_env`)
+    const dest = isAdmin ? `${appUrl}/admin/financeiro?mp=erro` : `${appUrl}/painel/perfil?mp=erro`
+    return NextResponse.redirect(`${dest}&reason=missing_env`)
   }
 
   try {
     const redirectUri = `${appUrl}/api/auth/mercadopago/callback`
 
-    // Exchange code for access token
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -43,28 +47,47 @@ export async function GET(req: NextRequest) {
     if (!tokenRes.ok || !tokenData.access_token) {
       console.error('[MP OAuth] token exchange failed', tokenData)
       const mpErrCode = tokenData?.error || tokenData?.message || 'token_failed'
-      return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro&reason=token_exchange&detail=${encodeURIComponent(mpErrCode)}`)
+      const dest = isAdmin ? `${appUrl}/admin/financeiro?mp=erro` : `${appUrl}/painel/perfil?mp=erro`
+      return NextResponse.redirect(`${dest}&reason=token_exchange&detail=${encodeURIComponent(mpErrCode)}`)
     }
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
 
-    const { error: updateError } = await db
-      .from('influencers')
-      .update({
-        mp_access_token: tokenData.access_token,
-        mp_refresh_token: tokenData.refresh_token || null,
-        mp_user_id: String(tokenData.user_id),
-        mp_token_expires_at: expiresAt,
-        mp_connected_at: new Date().toISOString(),
-        mp_connected: true,
-      } as any)
-      .eq('id', state)
+    if (isAdmin) {
+      const { error: updateError } = await db
+        .from('platform_mp_config' as any)
+        .update({
+          mp_access_token: tokenData.access_token,
+          mp_refresh_token: tokenData.refresh_token || null,
+          mp_user_id: String(tokenData.user_id),
+          mp_token_expires_at: expiresAt,
+          mp_connected_at: new Date().toISOString(),
+          mp_connected: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', true)
 
-    if (updateError) throw updateError
+      if (updateError) throw updateError
+      return NextResponse.redirect(`${appUrl}/admin/financeiro?mp=conectado`)
+    } else {
+      const { error: updateError } = await db
+        .from('influencers')
+        .update({
+          mp_access_token: tokenData.access_token,
+          mp_refresh_token: tokenData.refresh_token || null,
+          mp_user_id: String(tokenData.user_id),
+          mp_token_expires_at: expiresAt,
+          mp_connected_at: new Date().toISOString(),
+          mp_connected: true,
+        } as any)
+        .eq('id', state)
 
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=conectado`)
+      if (updateError) throw updateError
+      return NextResponse.redirect(`${appUrl}/painel/perfil?mp=conectado`)
+    }
   } catch (err) {
     console.error('[MP OAuth Callback]', err)
-    return NextResponse.redirect(`${appUrl}/painel/perfil?mp=erro`)
+    const dest = isAdmin ? `${appUrl}/admin/financeiro?mp=erro` : `${appUrl}/painel/perfil?mp=erro`
+    return NextResponse.redirect(dest)
   }
 }
