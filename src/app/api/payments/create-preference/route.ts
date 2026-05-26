@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
-import { mpClientForSeller, mpPreference, calcPrecos, isSandbox } from '@/lib/mercadopago'
+import { mpPreference, calcPrecos, isSandbox } from '@/lib/mercadopago'
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,11 +79,10 @@ export async function POST(req: NextRequest) {
       expiration_date_to: expiresAt,
     }
 
-    // Use seller's token if connected (split de pagamentos 1:1)
-    // Fall back to platform token for backward compatibility / testing
+    // Pagamento sempre vai para conta do admin (marketplace)
+    // A transferência para a influenciadora ocorre quando ela marca o serviço como concluído
     const influencer = (booking as any).influencers
-    const sellerToken: string | null = influencer?.mp_connected ? influencer.mp_access_token : null
-    const preferenceClient = sellerToken ? mpClientForSeller(sellerToken).preference : mpPreference
+    const preferenceClient = mpPreference
 
     const preference = await preferenceClient.create({ body: preferenceData })
 
