@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     let query = db
       .from('bookings')
       .select(
-        'id, codigo_confirmacao, payment_status, status, price_original, price_client, platform_fee, mp_fee, mp_payment_id, paid_at, released_at, data_agendada, created_at, clients(nome, email, whatsapp), influencers(nome, username), services(tipo, preco)',
+        'id, codigo_confirmacao, payment_status, status, price_original, price_client, platform_fee, mp_fee, mp_payment_id, paid_at, released_at, completed_at, data_agendada, created_at, clients(nome, email, whatsapp), influencers(nome, username), services(tipo, preco)',
         { count: 'exact' },
       )
       .order('created_at', { ascending: false })

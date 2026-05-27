@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   LayoutDashboard, Users, UserCheck, ClipboardList, Clock, LogOut, Menu, X, CreditCard, TrendingUp
 } from "lucide-react";
@@ -14,6 +15,13 @@ export const AdminLayout = ({ children, title }: { children: React.ReactNode; ti
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [awaitingCount, setAwaitingCount] = useState(0);
+
+  useEffect(() => {
+    apiFetch('/api/admin/pagamentos?status=AWAITING_TRANSFER&limit=1')
+      .then((res: any) => setAwaitingCount(res.total || 0))
+      .catch(() => {})
+  }, [])
 
   const menuItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
@@ -42,7 +50,13 @@ export const AdminLayout = ({ children, title }: { children: React.ReactNode; ti
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   pathname === item.path ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
                 }`}>
-                <item.icon size={18} />{item.label}
+                <item.icon size={18} />
+                <span className="flex-1">{item.label}</span>
+                {item.path === '/admin/financeiro' && awaitingCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
+                    {awaitingCount}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

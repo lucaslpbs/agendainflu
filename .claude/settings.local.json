@@ -75,7 +75,9 @@
       "PowerShell(npx tsc --noEmit 2>&1)",
       "Bash(mkdir \"c:\\\\Users\\\\gabri\\\\source\\\\repos\\\\agendainflu\\\\src\\\\app\\\\completar-cadastro\")",
       "Bash(npm list *)",
-      "Bash(node -e \"const mp = require\\('mercadopago'\\); console.log\\(Object.keys\\(mp\\)\\)\")"
+      "Bash(node -e \"const mp = require\\('mercadopago'\\); console.log\\(Object.keys\\(mp\\)\\)\")",
+      "Bash(Get-ChildItem -Path \"src\" -Directory)",
+      "Bash(Select-Object Name)"
     ],
     "additionalDirectories": [
       "c:\\Users\\gabri\\source\\repos\\agendainflu\\src\\app"

@@ -7,7 +7,7 @@ import { AdminLayout } from "./AdminLayout"
 import { toast } from "sonner"
 import {
   TrendingUp, DollarSign, ArrowDownLeft, ArrowUpRight, Clock,
-  CheckCircle2, CreditCard, Loader2, ExternalLink, Link2Off, ShieldCheck
+  CheckCircle2, CreditCard, Loader2, ExternalLink, Link2Off, ShieldCheck, AlertTriangle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { format, parseISO } from "date-fns"
@@ -38,6 +38,8 @@ export const AdminFinanceiro = () => {
   const [tab, setTab] = useState<"concluidos" | "aguardando">("aguardando")
   const [mpConfig, setMpConfig] = useState<MpConfig | null>(null)
   const [mpDisconnecting, setMpDisconnecting] = useState(false)
+  const [pendingTransfers, setPendingTransfers] = useState<any[]>([])
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -62,7 +64,24 @@ export const AdminFinanceiro = () => {
     apiFetch("/api/admin/mp-config")
       .then((res) => setMpConfig(res))
       .catch(() => {})
+
+    apiFetch("/api/admin/pagamentos?status=AWAITING_TRANSFER&limit=100")
+      .then((res: any) => setPendingTransfers(res.data || []))
+      .catch(() => {})
   }, [])
+
+  const handleMarkPaid = async (id: string) => {
+    setMarkingPaid(id)
+    try {
+      await apiFetch(`/api/admin/pagamentos/${id}/mark-paid`, { method: 'PATCH' })
+      setPendingTransfers(prev => prev.filter(b => b.id !== id))
+      toast.success('Pagamento marcado como realizado!')
+    } catch {
+      toast.error('Erro ao marcar pagamento')
+    } finally {
+      setMarkingPaid(null)
+    }
+  }
 
   const handleDisconnectMP = async () => {
     setMpDisconnecting(true)
@@ -146,6 +165,52 @@ export const AdminFinanceiro = () => {
   return (
     <AdminLayout title="Financeiro — Lucro & Pagamentos">
       <div className="space-y-6">
+        {/* Pending manual transfers alert */}
+        {pendingTransfers.length > 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-5">
+            <h3 className="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-4">
+              <AlertTriangle size={18} />
+              Pagamentos Pendentes de Transferência ({pendingTransfers.length})
+            </h3>
+            <div className="space-y-3">
+              {pendingTransfers.map((b) => (
+                <div key={b.id} className="bg-card rounded-lg border border-amber-500/30 p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <span>{b.influencers?.nome || '—'}</span>
+                      <span className="text-muted-foreground text-xs">@{b.influencers?.username || '—'}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono">{b.codigo_confirmacao}</span>
+                      <span>·</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-semibold">
+                        R$ {Number(b.price_original || 0).toFixed(2)}
+                      </span>
+                      {b.completed_at && (
+                        <>
+                          <span>·</span>
+                          <span>Concluído {format(parseISO(b.completed_at), "dd/MM/yy HH:mm", { locale: ptBR })}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white"
+                    disabled={markingPaid === b.id}
+                    onClick={() => handleMarkPaid(b.id)}
+                  >
+                    {markingPaid === b.id
+                      ? <Loader2 size={14} className="animate-spin mr-1" />
+                      : <CheckCircle2 size={14} className="mr-1" />}
+                    Marcar como Pago
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* MP Platform connection card */}
         <div className={`bg-card rounded-xl border p-5 flex items-center justify-between gap-4 ${mpConfig?.mp_connected ? "border-green-500/40" : "border-yellow-500/40"}`}>
           <div className="flex items-center gap-3">
