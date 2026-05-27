@@ -65,7 +65,6 @@ export async function POST(req: NextRequest) {
         email: (cp as any)?.email || auth.email || 'cliente@agendainflu.com',
         name: (cp as any)?.nome || 'Cliente',
       },
-      marketplace_fee: comissaoPlataforma,
       back_urls: {
         success: `${appUrl}/agendamentos/${booking.id}/pagamento/sucesso`,
         failure: `${appUrl}/agendamentos/${booking.id}/pagamento/erro`,
