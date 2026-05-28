@@ -87,8 +87,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         transferSuccess = true
       } catch (transferErr) {
-        // Transferência falhou — mantém AWAITING_TRANSFER e notifica admin para agir manualmente
-        console.error('[complete] Falha na transferência automática MP:', transferErr)
+        const errMsg = transferErr instanceof Error ? transferErr.message : String(transferErr)
+        const errStack = transferErr instanceof Error ? transferErr.stack : undefined
+        console.error('[complete] Falha na transferência automática MP — mensagem:', errMsg)
+        if (errStack) console.error('[complete] Stack:', errStack)
+
+        await db.from('payment_transactions' as any).insert({
+          booking_id: params.id,
+          mp_payment_id: booking.mp_payment_id || null,
+          type: 'manual_transfer',
+          amount: transferAmount,
+          status: 'failed',
+          mp_response: { error: errMsg, note: 'auto_transfer_failed', booking_id: params.id },
+        })
       }
     }
 
