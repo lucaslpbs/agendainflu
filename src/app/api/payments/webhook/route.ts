@@ -6,7 +6,10 @@ import { sendWhatsApp } from '@/lib/wa'
 
 function validateMpSignature(req: NextRequest, dataId: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET
-  if (!secret) return true // skip if not configured
+  if (!secret) {
+    console.log('[webhook] MP_WEBHOOK_SECRET não configurado, pulando validação')
+    return true
+  }
 
   const xSignature = req.headers.get('x-signature')
   const xRequestId = req.headers.get('x-request-id')
@@ -53,6 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { type, data } = body
+    console.log('[webhook] Recebido:', JSON.stringify({ type, dataId: data?.id }))
 
     if (type !== 'payment') {
       return NextResponse.json({ received: true })
@@ -65,10 +69,19 @@ export async function POST(req: NextRequest) {
 
     if (!validateMpSignature(req, String(paymentId))) {
       console.warn('[webhook] assinatura MP inválida, notificação ignorada')
+      console.warn('[webhook] x-signature recebido:', req.headers.get('x-signature'))
+      console.warn('[webhook] x-request-id recebido:', req.headers.get('x-request-id'))
       return NextResponse.json({ received: true })
     }
 
-    const payment = await mpPayment.get({ id: String(paymentId) })
+    let payment: any
+    try {
+      payment = await mpPayment.get({ id: String(paymentId) })
+    } catch (mpErr) {
+      console.error('[webhook] Erro ao buscar payment no MP:', mpErr)
+      return NextResponse.json({ received: true })
+    }
+    console.log('[webhook] Payment status do MP:', (payment as any).status, '| external_reference:', (payment as any).external_reference)
 
     const externalRef = (payment as any).external_reference
     if (!externalRef?.startsWith('booking-')) {
@@ -110,6 +123,7 @@ export async function POST(req: NextRequest) {
           status: 'confirmado',
         } as any)
         .eq('id', bookingId)
+      console.log('[webhook] Booking atualizado para PAID, id:', bookingId)
 
       // Notify influencer about new paid booking
       try {
