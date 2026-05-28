@@ -76,6 +76,15 @@ export async function POST(req: NextRequest) {
       statement_descriptor: 'AGENDAINFLU',
       expires: true,
       expiration_date_to: expiresAt,
+      payment_methods: {
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' },
+          { id: 'atm' },
+          { id: 'prepaid_card' },
+        ],
+      },
     }
 
     // Pagamento sempre vai para conta do admin (marketplace)
