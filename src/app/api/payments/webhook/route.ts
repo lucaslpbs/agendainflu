@@ -54,15 +54,17 @@ async function logTransaction(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { type, data } = body
-    console.log('[webhook] Recebido:', JSON.stringify({ type, dataId: data?.id }))
+    const url = new URL(req.url)
+    const body = await req.json().catch(() => ({}))
+    const type = url.searchParams.get('type') || body.type
+    const dataId = url.searchParams.get('data.id') || body.data?.id
+    console.log('[webhook] Recebido:', JSON.stringify({ type, dataId }))
 
     if (type !== 'payment') {
       return NextResponse.json({ received: true })
     }
 
-    const paymentId = data?.id
+    const paymentId = dataId
     if (!paymentId) {
       return NextResponse.json({ received: true })
     }
