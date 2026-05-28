@@ -84,9 +84,9 @@ export async function POST(req: NextRequest) {
           { id: 'atm' },
           { id: 'prepaid_card' },
         ],
-        excluded_payment_methods: [
-          { id: 'account_money' },
-        ],
+        // excluded_payment_methods: [
+        //   { id: 'account_money' },
+        // ],
       },
     }
 
