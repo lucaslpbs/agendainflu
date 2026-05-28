@@ -259,6 +259,7 @@ const AgendamentosPage = () => {
         open={!!selectedBooking}
         onOpenChange={(open) => !open && setSelectedBooking(null)}
         onUpdateStatus={handleUpdateStatus}
+        onComplete={(id) => { setSelectedBooking(null); setCompletingId(id); }}
       />
     </PanelLayout>
   );

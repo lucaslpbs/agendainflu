@@ -25,11 +25,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateStatus?: (id: string, status: "confirmado" | "cancelado" | "concluido") => void;
+  onComplete?: (id: string) => void;
 }
 
 const NOTIFY_ENDPOINT = "/api/bookings/notify-whatsapp";
 
-const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Props) => {
+const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus, onComplete }: Props) => {
   const { influencer } = useAuth();
   const [sending, setSending] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false)
@@ -225,10 +226,10 @@ const BookingDetailDialog = ({ booking, open, onOpenChange, onUpdateStatus }: Pr
                 </Button>
               </>
             )}
-            {b.status === "confirmado" && onUpdateStatus && (
+            {b.status === "confirmado" && (onUpdateStatus || onComplete) && (
               <>
                 <Button size="sm" className="gap-1.5"
-                  onClick={() => { onUpdateStatus(b.id, "concluido"); onOpenChange(false); }}>
+                  onClick={() => { onComplete ? onComplete(b.id) : onUpdateStatus?.(b.id, "concluido"); onOpenChange(false); }}>
                   <Check size={14} /> Concluir
                 </Button>
                 <Button variant="destructive" size="sm" className="gap-1.5"
