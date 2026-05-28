@@ -86,16 +86,22 @@ export async function transferToInfluencer(params: {
   const adminMpUserId = adminConfig.mp_user_id as string
 
   const body = {
-    transaction_amount: amount,
+    origin: { type: 'account', id: adminMpUserId },
+    destination: { type: 'account', id: influencerMpUserId },
+    amount,
     currency_id: 'BRL',
-    payment_method_id: 'account_money',
-    payer: { id: adminMpUserId },
-    collector: { id: influencerMpUserId },
     description: `Repasse booking #${bookingId}`,
     external_reference: `release-booking-${bookingId}`,
   }
 
-  const response = await fetch('https://api.mercadopago.com/v1/payments', {
+  console.log('[transferToInfluencer] Iniciando transferência:', {
+    de: adminMpUserId,
+    para: influencerMpUserId,
+    valor: amount,
+    bookingId,
+  })
+
+  const response = await fetch('https://api.mercadopago.com/v1/transfers', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -104,9 +110,12 @@ export async function transferToInfluencer(params: {
     body: JSON.stringify(body),
   })
 
+  const responseBody = await response.text()
+
   if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('[transferToInfluencer] Falha na transferência MP:', errorBody)
-    throw new Error(`Falha ao transferir para influenciadora via Mercado Pago: ${response.status} — ${errorBody}`)
+    console.error(`[transferToInfluencer] Falha HTTP ${response.status}:`, responseBody)
+    throw new Error(`Falha ao transferir para influenciadora via Mercado Pago: ${response.status} — ${responseBody}`)
   }
+
+  console.log('[transferToInfluencer] Transferência realizada com sucesso:', responseBody)
 }
