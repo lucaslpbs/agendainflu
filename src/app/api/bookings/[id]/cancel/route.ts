@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError } from '@/lib/errors'
 import { addDays, format } from 'date-fns'
-import { mpRefund } from '@/lib/mercadopago'
+import { sendWhatsApp } from '@/lib/wa'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const { data: booking } = await db
       .from('bookings')
-      .select('id, status, payment_status, data_agendada, client_id, influencer_id, codigo_confirmacao, mp_payment_id, price_client')
+      .select('id, status, payment_status, data_agendada, client_id, influencer_id, codigo_confirmacao, mp_payment_id, price_client, influencers(nome, whatsapp)')
       .eq('id', params.id)
       .in('client_id', clientIds)
       .maybeSingle() as any
@@ -31,94 +31,55 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
     }
 
-    if (['COMPLETED', 'CANCELLED'].includes(booking.payment_status)) {
+    if (['COMPLETED', 'CANCELLED', 'REFUNDED', 'CANCELLATION_REQUESTED'].includes(booking.payment_status)) {
       return NextResponse.json(
-        { error: 'Não é possível cancelar um agendamento ' + booking.status },
+        { error: 'Não é possível cancelar um agendamento com status ' + booking.payment_status },
         { status: 400 },
       )
     }
 
-    const minDate = format(addDays(new Date(), 2), 'yyyy-MM-dd')
+    const minDate = format(addDays(new Date(), 3), 'yyyy-MM-dd')
     if (booking.data_agendada < minDate) {
       return NextResponse.json(
-        { error: 'Cancelamento só é permitido com no mínimo 2 dias de antecedência' },
+        { error: 'Cancelamento só é permitido com no mínimo 3 dias de antecedência' },
         { status: 400 },
       )
     }
 
-    let refundStatus = 'not_applicable'
-
-    // Issue refund if payment was already captured
-    if (booking.payment_status === 'PAID' && booking.mp_payment_id) {
-      try {
-        const refund = await mpRefund.create({
-          payment_id: booking.mp_payment_id,
-          body: { amount: booking.price_client },
-        })
-
-        refundStatus = (refund as any).status || 'approved'
-
-        await db.from('payment_transactions' as any).insert({
-          booking_id: params.id,
-          mp_payment_id: booking.mp_payment_id,
-          type: 'refund',
-          amount: booking.price_client || 0,
-          status: refundStatus,
-          mp_response: refund,
-        })
-      } catch (refundErr) {
-        console.error('[cancel] MP refund error:', refundErr)
-        refundStatus = 'error'
-        await db.from('payment_transactions' as any).insert({
-          booking_id: params.id,
-          mp_payment_id: booking.mp_payment_id,
-          type: 'refund',
-          amount: booking.price_client || 0,
-          status: 'error',
-          mp_response: { error: String(refundErr) },
-        })
-      }
+    // Se não foi pago ainda, cancela direto sem precisar de confirmação do influencer
+    if (booking.payment_status === 'PENDING_PAYMENT') {
+      await db
+        .from('bookings')
+        .update({ status: 'cancelado', payment_status: 'CANCELLED' } as any)
+        .eq('id', params.id)
+      return NextResponse.json({ cancelled: true, refund_status: 'not_applicable' })
     }
 
+    // Booking foi pago — entra no fluxo de confirmação pelo influencer antes do reembolso
     await db
       .from('bookings')
-      .update({ status: 'cancelado', payment_status: 'CANCELLED' } as any)
+      .update({ payment_status: 'CANCELLATION_REQUESTED' } as any)
       .eq('id', params.id)
 
-    // Notify influencer
+    // Notifica influencer para confirmar ou rejeitar o cancelamento
+    const influencer = booking.influencers as any
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
     try {
-      const { data: inf } = await db
-        .from('influencers')
-        .select('nome, whatsapp')
-        .eq('id', booking.influencer_id)
-        .maybeSingle()
-
-      const { data: client } = await db
-        .from('clients')
-        .select('nome')
-        .eq('id', booking.client_id)
-        .maybeSingle()
-
-      const webhookUrl = process.env.N8N_WEBHOOK_NOVO_AGENDAMENTO
-      if (webhookUrl && inf?.whatsapp) {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            evento: 'agendamento_cancelado_cliente',
-            influencer_nome: inf.nome,
-            influencer_whatsapp: inf.whatsapp,
-            cliente_nome: client?.nome || 'Cliente',
-            codigo: booking.codigo_confirmacao,
-            data_agendada: new Date(booking.data_agendada + 'T12:00:00').toLocaleDateString('pt-BR'),
-          }),
-        })
+      if (influencer?.whatsapp) {
+        await sendWhatsApp(
+          influencer.whatsapp,
+          `⚠️ O cliente solicitou cancelamento do agendamento ${booking.codigo_confirmacao}. Acesse o painel para confirmar ou recusar: ${appUrl}/painel/agendamentos`,
+        )
       }
-    } catch (notifyErr) {
-      console.error('[cancel] notify error:', notifyErr)
+    } catch (waErr) {
+      console.error('[cancel] influencer WhatsApp notify error:', waErr)
     }
 
-    return NextResponse.json({ cancelled: true, refund_status: refundStatus })
+    return NextResponse.json({
+      cancelled: false,
+      pending_influencer_confirmation: true,
+      message: 'Solicitação de cancelamento enviada. O influencer precisa confirmar para o reembolso ser processado.',
+    })
   } catch (e) {
     return apiError(e)
   }
