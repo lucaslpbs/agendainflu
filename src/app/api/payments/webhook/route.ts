@@ -6,6 +6,7 @@ import { sendWhatsApp } from '@/lib/wa'
 
 function validateMpSignature(req: NextRequest, dataId: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET
+  console.log('[webhook] secret length:', secret?.length, 'first char:', secret?.[0])
   if (!secret) {
     console.log('[webhook] MP_WEBHOOK_SECRET não configurado, pulando validação')
     return true
