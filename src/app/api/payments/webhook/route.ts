@@ -110,7 +110,11 @@ export async function POST(req: NextRequest) {
     const transactionAmount = (payment as any).transaction_amount || 0
     const mpPaymentIdStr = String(paymentId)
 
-    await logTransaction(bookingId, mpPaymentIdStr, 'charge', transactionAmount, paymentStatus, payment)
+    try {
+      await logTransaction(bookingId, mpPaymentIdStr, 'charge', transactionAmount, paymentStatus, payment)
+    } catch (logErr) {
+      console.error('[webhook] Erro ao registrar transação (não crítico):', logErr)
+    }
 
     if (paymentStatus === 'approved') {
       // Idempotency: skip if already paid
@@ -118,7 +122,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true })
       }
 
-      await db
+      const { error: updateError } = await db
         .from('bookings')
         .update({
           payment_status: 'PAID',
@@ -128,7 +132,12 @@ export async function POST(req: NextRequest) {
           status: 'confirmado',
         } as any)
         .eq('id', bookingId)
-      console.log('[webhook] Booking atualizado para PAID, id:', bookingId)
+
+      if (updateError) {
+        console.error('[webhook] ERRO ao atualizar booking para PAID:', updateError)
+      } else {
+        console.log('[webhook] Booking atualizado para PAID, id:', bookingId)
+      }
 
       // Notify influencer about new paid booking
       try {
@@ -178,8 +187,9 @@ export async function POST(req: NextRequest) {
       if ((booking as any).payment_status === 'PENDING_PAYMENT') {
         await db
           .from('bookings')
-          .update({ payment_status: 'PENDING_PAYMENT' } as any)
+          .update({ payment_status: 'CANCELLED' } as any)
           .eq('id', bookingId)
+        console.log('[webhook] Booking marcado como CANCELLED, id:', bookingId)
       }
     }
 
