@@ -25,16 +25,38 @@ function validateMpSignature(req: NextRequest, dataId: string): boolean {
   }
   if (!ts || !v1) return false
 
-  const parts: string[] = []
-  if (dataId) parts.push(`id:${dataId}`)
-  if (xRequestId) parts.push(`request-id:${xRequestId}`)
-  if (ts) parts.push(`ts:${ts}`)
-  const manifest = parts.join(';')
+  const manifestFull = [
+    dataId ? `id:${dataId}` : null,
+    xRequestId ? `request-id:${xRequestId}` : null,
+    ts ? `ts:${ts}` : null,
+  ].filter(Boolean).join(';')
 
-  const computed = createHmac('sha256', Buffer.from(secret, 'hex')).update(manifest).digest('hex')
-  console.log('[webhook] manifest gerado:', manifest)
-  console.log('[webhook] computed hash:', computed)
+  const manifestNoReqId = [
+    dataId ? `id:${dataId}` : null,
+    ts ? `ts:${ts}` : null,
+  ].filter(Boolean).join(';')
+
+  console.log('[webhook] manifest gerado:', manifestFull)
   console.log('[webhook] expected hash (v1):', v1)
+
+  const candidates: Array<{ label: string; key: string | Buffer; manifest: string }> = [
+    { label: 'raw+full',       key: secret,                              manifest: manifestFull },
+    { label: 'raw+noReqId',    key: secret,                              manifest: manifestNoReqId },
+    { label: 'hex+full',       key: Buffer.from(secret, 'hex'),          manifest: manifestFull },
+    { label: 'hex+noReqId',    key: Buffer.from(secret, 'hex'),          manifest: manifestNoReqId },
+    { label: 'b64+full',       key: Buffer.from(secret, 'base64'),       manifest: manifestFull },
+    { label: 'b64+noReqId',    key: Buffer.from(secret, 'base64'),       manifest: manifestNoReqId },
+  ]
+
+  for (const c of candidates) {
+    try {
+      const h = createHmac('sha256', c.key).update(c.manifest).digest('hex')
+      const match = h === v1 ? '✅ MATCH' : '❌'
+      console.log(`[webhook debug] ${c.label}: ${h} ${match}`)
+    } catch (_) { /* key inválida para esse encoding, ignora */ }
+  }
+
+  const computed = createHmac('sha256', secret).update(manifestFull).digest('hex')
   return computed === v1
 }
 
