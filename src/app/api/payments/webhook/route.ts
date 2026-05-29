@@ -28,7 +28,7 @@ function validateMpSignature(req: NextRequest, dataId: string): boolean {
   if (dataId) parts.push(`id:${dataId}`)
   if (xRequestId) parts.push(`request-id:${xRequestId}`)
   if (ts) parts.push(`ts:${ts}`)
-  const manifest = parts.join(';') + ';'
+  const manifest = parts.join(';')
 
   const computed = createHmac('sha256', secret).update(manifest).digest('hex')
   console.log('[webhook] manifest gerado:', manifest)
