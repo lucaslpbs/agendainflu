@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const body = await req.json().catch(() => ({}))
+    console.log('[webhook] RAW URL:', req.url)
+    console.log('[webhook] RAW body:', JSON.stringify(body))
     const type = url.searchParams.get('type') || body.type
     const dataId = url.searchParams.get('data.id') || body.data?.id
     console.log('[webhook] URL completa:', req.url)
