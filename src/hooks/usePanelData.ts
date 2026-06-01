@@ -18,7 +18,7 @@ export function useBookings(params?: { status?: string; data_inicio?: string; da
   return useQuery({
     queryKey: ['bookings', params],
     queryFn: async () => {
-      const qs = new URLSearchParams()
+      const qs = new URLSearchParams({ limit: '100' })
       if (params?.status) qs.set('status', params.status)
       if (params?.data_inicio) qs.set('data_inicio', params.data_inicio)
       if (params?.data_fim) qs.set('data_fim', params.data_fim)
