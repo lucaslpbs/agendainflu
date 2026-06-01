@@ -15,6 +15,8 @@ import { ptBR } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
 
+const isSandbox = process.env.NEXT_PUBLIC_MP_ENVIRONMENT !== 'production';
+
 const serviceLabels: Record<string, string> = {
   stories: "Stories", reels: "Reels", reels_stories: "Reels + Stories", feed: "Feed", presencial: "Presencial",
 };
@@ -46,7 +48,6 @@ const AgendarServico = () => {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [sandboxInitPoint, setSandboxInitPoint] = useState<string | null>(null);
-  const [isSandbox, setIsSandbox] = useState(false);
   const [preferenceLoading, setPreferenceLoading] = useState(false);
   const [priceClient, setPriceClient] = useState(0);
 
@@ -231,7 +232,6 @@ const AgendarServico = () => {
         const prefData = await prefRes.json();
         setPreferenceId(prefData.preference_id);
         setSandboxInitPoint(prefData.sandbox_init_point);
-        setIsSandbox(prefData.is_sandbox);
         setPriceClient(prefData.price_client);
         preferenceOk = true;
       } catch (prefErr: any) {
