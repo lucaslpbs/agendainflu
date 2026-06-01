@@ -84,7 +84,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const type = url.searchParams.get('type') || body.type
     const dataId = url.searchParams.get('data.id') || body.data?.id
-    console.log('[webhook] Recebido:', JSON.stringify({ type, dataId }))
+    console.log('[webhook] URL completa:', req.url)
+    console.log('[webhook] Todos query params:', Object.fromEntries(url.searchParams.entries()))
+    console.log('[webhook] Headers relevantes:', {
+      'x-signature': req.headers.get('x-signature'),
+      'x-request-id': req.headers.get('x-request-id'),
+      'content-type': req.headers.get('content-type'),
+      'user-agent': req.headers.get('user-agent'),
+    })
+    console.log('[webhook] Body recebido:', JSON.stringify(body))
+    console.log('[webhook] type lido:', type, '| dataId lido:', dataId)
 
     if (type !== 'payment') {
       return NextResponse.json({ received: true })
