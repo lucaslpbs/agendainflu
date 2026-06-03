@@ -80,13 +80,9 @@ export async function POST(req: NextRequest) {
         excluded_payment_types: [
           { id: 'credit_card' },
           { id: 'debit_card' },
-          { id: 'ticket' },
           { id: 'atm' },
           { id: 'prepaid_card' },
         ],
-        // excluded_payment_methods: [
-        //   { id: 'account_money' },
-        // ],
       },
     }
 
